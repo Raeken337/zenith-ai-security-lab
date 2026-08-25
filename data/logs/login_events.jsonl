@@ -1,1 +1,3 @@
 {"timestamp": "2026-08-25T23:26:03.135004", "event_type": "login_success", "username": "jake", "source_device": "PC-B1", "authenticated": true, "reason": "Login successful", "department": "finance", "groups": ["employees", "finance"]}
+{"timestamp": "2026-08-26T00:32:50.161243", "event_type": "login_success", "username": "jake", "source_device": "PC-B1", "authenticated": true, "reason": "Login successful", "department": "finance", "groups": ["employees", "finance"]}
+{"timestamp": "2026-08-26T00:35:26.676123", "event_type": "login_success", "username": "jake", "source_device": "PC-B1", "authenticated": true, "reason": "Login successful", "department": "finance", "groups": ["employees", "finance"]}
