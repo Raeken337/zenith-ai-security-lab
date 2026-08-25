@@ -1,0 +1,1 @@
+{"timestamp": "2026-08-25T23:26:03.135004", "event_type": "login_success", "username": "jake", "source_device": "PC-B1", "authenticated": true, "reason": "Login successful", "department": "finance", "groups": ["employees", "finance"]}
