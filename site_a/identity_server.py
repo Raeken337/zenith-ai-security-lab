@@ -26,6 +26,10 @@ USERS = {
 
 SESSIONS = {}
 
+MAX_FAILED_ATTEMPTS = 3
+
+FAILED_ATTEMPTS = {}
+LOCKED_ACCOUNTS = set()
 
 def authenticate_user(username, password):
     user = USERS.get(username)
@@ -36,11 +40,33 @@ def authenticate_user(username, password):
             "reason": "User does not exist"
         }
 
-    if user["password"] != password:
+    if username in LOCKED_ACCOUNTS:
         return {
             "authenticated": False,
-            "reason": "Incorrect password"
+            "reason": "Account locked"
         }
+
+    if user["password"] != password:
+        FAILED_ATTEMPTS[username] = FAILED_ATTEMPTS.get(username, 0) + 1
+
+        attempts = FAILED_ATTEMPTS[username]
+
+        if attempts >= MAX_FAILED_ATTEMPTS:
+            LOCKED_ACCOUNTS.add(username)
+
+            return {
+                "authenticated": False,
+                "reason": "Account locked after repeated failed login attempts"
+            }
+
+        remaining_attempts = MAX_FAILED_ATTEMPTS - attempts
+
+        return {
+            "authenticated": False,
+            "reason": f"Incorrect password. {remaining_attempts} attempts remaining"
+        }
+
+    FAILED_ATTEMPTS[username] = 0
 
     session_token = secrets.token_hex(16)
 

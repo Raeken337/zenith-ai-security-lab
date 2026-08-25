@@ -23,9 +23,18 @@ def log_login_event(
 ):
     ensure_log_directory()
 
+    if authenticated:
+        event_type = "login_success"
+
+    elif "locked" in reason.lower():
+        event_type = "account_locked"
+
+    else:
+        event_type = "login_failure"
+
     event = {
         "timestamp": datetime.now().isoformat(),
-        "event_type": "login_success" if authenticated else "login_failure",
+        "event_type": event_type,
         "username": username,
         "source_device": source_device,
         "authenticated": authenticated,
