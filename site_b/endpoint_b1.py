@@ -39,6 +39,34 @@ def login(username, password):
     return json.loads(raw_response)
 
 
+def reset_password(username, new_password):
+    client_socket = socket.socket(
+        socket.AF_INET,
+        socket.SOCK_STREAM
+    )
+
+    client_socket.connect(
+        (IDENTITY_SERVER_HOST, IDENTITY_SERVER_PORT)
+    )
+
+    request = {
+        "action": "reset_password",
+        "username": username,
+        "new_password": new_password,
+        "source_device": SOURCE_DEVICE
+    }
+
+    client_socket.send(
+        json.dumps(request).encode("utf-8")
+    )
+
+    raw_response = client_socket.recv(4096).decode("utf-8")
+
+    client_socket.close()
+
+    return json.loads(raw_response)
+
+
 def access_file(session_token, resource):
     client_socket = socket.socket(
         socket.AF_INET,
@@ -67,21 +95,44 @@ def access_file(session_token, resource):
 
 
 if __name__ == "__main__":
-    login_response = login(
-        username="jake",
-        password="Password123"
-    )
+    while True:
+        print("\nZENITH CORPORATE ENDPOINT")
+        print("-------------------------")
+        print("1. Login")
+        print("2. Reset Password")
+        print("3. Exit")
 
-    print("\nLogin Response")
-    print("--------------")
-    print(login_response)
+        choice = input("\nSelect an option: ")
 
-    if login_response["authenticated"]:
-        file_response = access_file(
-            session_token=login_response["session_token"],
-            resource="finance_payroll"
-        )
+        if choice == "1":
+            username = input("Username: ")
+            password = input("Password: ")
 
-        print("\nFile Server Response")
-        print("--------------------")
-        print(file_response)
+            login_response = login(
+                username=username,
+                password=password
+            )
+
+            print("\nLogin Response")
+            print("--------------")
+            print(login_response)
+
+        elif choice == "2":
+            username = input("Username: ")
+            new_password = input("New password: ")
+
+            reset_response = reset_password(
+                username=username,
+                new_password=new_password
+            )
+
+            print("\nPassword Reset Response")
+            print("-----------------------")
+            print(reset_response)
+
+        elif choice == "3":
+            print("Endpoint session closed.")
+            break
+
+        else:
+            print("Invalid option.")

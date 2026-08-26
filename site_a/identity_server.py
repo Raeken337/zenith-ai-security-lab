@@ -2,7 +2,10 @@ import socket
 import json
 import secrets
 
-from shared.logger import log_login_event
+from shared.logger import (
+    log_login_event,
+    log_account_event
+)
 
 
 HOST = "127.0.0.1"
@@ -30,6 +33,7 @@ MAX_FAILED_ATTEMPTS = 3
 
 FAILED_ATTEMPTS = {}
 LOCKED_ACCOUNTS = set()
+
 
 def authenticate_user(username, password):
     user = USERS.get(username)
@@ -104,6 +108,40 @@ def validate_session(session_token):
     }
 
 
+def reset_password(username, new_password, source_device):
+    user = USERS.get(username)
+
+    if user is None:
+        return {
+            "reset_successful": False,
+            "reason": "User does not exist"
+        }
+
+    if len(new_password) < 8:
+        return {
+            "reset_successful": False,
+            "reason": "Password must contain at least 8 characters"
+        }
+
+    user["password"] = new_password
+
+    FAILED_ATTEMPTS[username] = 0
+
+    LOCKED_ACCOUNTS.discard(username)
+
+    log_account_event(
+        username=username,
+        source_device=source_device,
+        event_type="password_reset",
+        reason="Password reset and account unlocked"
+    )
+
+    return {
+        "reset_successful": True,
+        "reason": "Password reset successful. Account unlocked."
+    }
+
+
 def handle_request(request):
     action = request.get("action")
 
@@ -130,6 +168,17 @@ def handle_request(request):
         )
 
         return response
+
+    if action == "reset_password":
+        username = request["username"]
+        new_password = request["new_password"]
+        source_device = request["source_device"]
+
+        return reset_password(
+            username,
+            new_password,
+            source_device
+        )
 
     if action == "validate_session":
         session_token = request["session_token"]

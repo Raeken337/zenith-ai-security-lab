@@ -82,7 +82,8 @@ def handle_file_request(request):
     if not session["valid"]:
         return {
             "access_granted": False,
-            "reason": session["reason"]
+            "reason": session["reason"],
+            "resource": resource
         }
 
     username = session["username"]

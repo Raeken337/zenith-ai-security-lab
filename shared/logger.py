@@ -1,12 +1,14 @@
 import json
 from datetime import datetime
 from pathlib import Path
+from shared.telemetry_client import send_event_to_zenith
 
 
 LOG_DIRECTORY = Path("data/logs")
 
 LOGIN_LOG_FILE = LOG_DIRECTORY / "login_events.jsonl"
 FILE_ACCESS_LOG_FILE = LOG_DIRECTORY / "file_access_events.jsonl"
+ACCOUNT_LOG_FILE = LOG_DIRECTORY / "account_events.jsonl"
 
 
 def ensure_log_directory():
@@ -35,6 +37,8 @@ def log_login_event(
     event = {
         "timestamp": datetime.now().isoformat(),
         "event_type": event_type,
+        "origin_service": "identity_server",
+        "site": "SITE_A",
         "username": username,
         "source_device": source_device,
         "authenticated": authenticated,
@@ -48,6 +52,8 @@ def log_login_event(
 
     print(f"Login event recorded: {event['event_type']}")
 
+    send_event_to_zenith(event)
+
 
 def log_file_access_event(
     username,
@@ -60,11 +66,9 @@ def log_file_access_event(
 
     event = {
         "timestamp": datetime.now().isoformat(),
-        "event_type": (
-            "file_access_success"
-            if access_granted
-            else "file_access_denied"
-        ),
+        "event_type": event_type,
+        "origin_service": "file_server",
+        "site": "SITE_A",
         "username": username,
         "source_device": source_device,
         "resource": resource,
@@ -76,3 +80,29 @@ def log_file_access_event(
         log_file.write(json.dumps(event) + "\n")
 
     print(f"File access event recorded: {event['event_type']}")
+    send_event_to_zenith(event)
+
+
+def log_account_event(
+    username,
+    source_device,
+    event_type,
+    reason
+):
+    ensure_log_directory()
+
+    event = {
+        "timestamp": datetime.now().isoformat(),
+        "event_type": event_type,
+        "origin_service": "identity_server",
+        "site": "SITE_A",
+        "username": username,
+        "source_device": source_device,
+        "reason": reason
+    }
+
+    with ACCOUNT_LOG_FILE.open("a", encoding="utf-8") as log_file:
+        log_file.write(json.dumps(event) + "\n")
+
+    print(f"Account event recorded: {event['event_type']}")
+    send_event_to_zenith(event)
