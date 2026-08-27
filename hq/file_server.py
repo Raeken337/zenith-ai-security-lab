@@ -311,6 +311,18 @@ def handle_file_request(request):
             "access_granted": False,
             "reason": session["reason"]
         }
+    session_device = session.get(
+    "source_device"
+)
+
+    if session_device != source_device:
+        return {
+            "access_granted": False,
+            "reason": (
+                "Session is not valid "
+                "for this device"
+            )
+        }
 
     username = session["username"]
     full_name = session["full_name"]

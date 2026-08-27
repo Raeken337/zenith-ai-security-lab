@@ -13,6 +13,31 @@ from office.sales_team import get_sales_users
 from office.it_team import get_it_users
 from office.office_admin_team import get_office_admin_users
 
+from office.finance_team import (
+    get_finance_users,
+    get_finance_endpoints
+)
+
+from office.hr_team import (
+    get_hr_users,
+    get_hr_endpoints
+)
+
+from office.sales_team import (
+    get_sales_users,
+    get_sales_endpoints
+)
+
+from office.it_team import (
+    get_it_users,
+    get_it_endpoints
+)
+
+from office.office_admin_team import (
+    get_office_admin_users,
+    get_office_admin_endpoints
+)
+
 
 HOST = "127.0.0.1"
 PORT = 5001
@@ -52,11 +77,65 @@ def load_company_users():
 
     return user_directory
 
+def load_company_endpoints():
+    return (
+        get_finance_endpoints()
+        + get_hr_endpoints()
+        + get_sales_endpoints()
+        + get_it_endpoints()
+        + get_office_admin_endpoints()
+    )
 
 USERS = load_company_users()
 
+ENDPOINTS = load_company_endpoints()
 
-def authenticate_user(username, password):
+
+ENDPOINT_DIRECTORY = {
+    endpoint.device_id: endpoint
+    for endpoint in ENDPOINTS
+}
+
+def validate_endpoint(username, device_id):
+    endpoint = ENDPOINT_DIRECTORY.get(
+        device_id
+    )
+
+    if endpoint is None:
+        return {
+            "valid": False,
+            "reason": "Device is not registered"
+        }
+
+    if endpoint.site != "OFFICE":
+        return {
+            "valid": False,
+            "reason": "Device is not an Office endpoint"
+        }
+
+    if endpoint.assigned_user != username:
+        return {
+            "valid": False,
+            "reason": (
+                "Device is not assigned "
+                "to this user"
+            )
+        }
+
+    return {
+        "valid": True,
+        "reason": "Endpoint validated",
+        "device_id": endpoint.device_id,
+        "device_type": endpoint.device_type,
+        "connection_type": endpoint.connection_type,
+        "site": endpoint.site
+    }
+
+def authenticate_user(
+    username,
+    password,
+    source_device
+):
     user = USERS.get(username)
 
     if user is None:
@@ -112,7 +191,8 @@ def authenticate_user(username, password):
         "groups": user["groups"],
         "role": user["role"],
         "work_start": user["work_start"],
-        "work_end": user["work_end"]
+        "work_end": user["work_end"],
+        "source_device": source_device
     }
 
     return {
@@ -131,6 +211,7 @@ def authenticate_user(username, password):
 
 def validate_session(session_token):
     session = SESSIONS.get(session_token)
+    
 
     if session is None:
         return {
@@ -147,7 +228,8 @@ def validate_session(session_token):
         "groups": session["groups"],
         "role": session["role"],
         "work_start": session["work_start"],
-        "work_end": session["work_end"]
+        "work_end": session["work_end"],
+        "source_device": session["source_device"]
     }
 
 
@@ -204,16 +286,54 @@ def handle_request(request):
         source_device = request["source_device"]
 
         print(
-            f"\nLogin attempt for user: {username}"
+            f"\nLogin attempt for user: "
+            f"{username}"
         )
 
         print(
-            f"Source device: {source_device}"
+            f"Source device: "
+            f"{source_device}"
         )
+
+        endpoint_validation = validate_endpoint(
+            username,
+            source_device
+        )
+
+        if not endpoint_validation["valid"]:
+            user = USERS.get(username)
+
+            log_login_event(
+                username=username,
+                source_device=source_device,
+                authenticated=False,
+                reason=endpoint_validation["reason"],
+                department=(
+                    user["department"]
+                    if user
+                    else None
+                ),
+                groups=(
+                    user["groups"]
+                    if user
+                    else None
+                ),
+                role=(
+                    user["role"]
+                    if user
+                    else None
+                )
+            )
+
+            return {
+                "authenticated": False,
+                "reason": endpoint_validation["reason"]
+            }
 
         response = authenticate_user(
             username,
-            password
+            password,
+            source_device
         )
 
         user = USERS.get(username)
