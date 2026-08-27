@@ -378,6 +378,17 @@ if __name__ == "__main__":
             f"{user.username}"
         )
 
+    print("\nEndpoints")
+    print("---------")
+
+    for endpoint in HR_ENDPOINTS:
+        print(
+            f"{endpoint.device_id} | "
+            f"{endpoint.device_type} | "
+            f"{endpoint.assigned_user} | "
+            f"{endpoint.connection_type}"
+        )
+
     print("\nRole Access Test")
     print("----------------")
 
@@ -420,13 +431,3 @@ if __name__ == "__main__":
             "hr_records"
         )
     )
-    print("\nEndpoints")
-    print("---------")
-
-    for endpoint in HR_ENDPOINTS:
-        print(
-            f"{endpoint.device_id} | "
-            f"{endpoint.device_type} | "
-            f"{endpoint.assigned_user} | "
-            f"{endpoint.connection_type}"
-        )
