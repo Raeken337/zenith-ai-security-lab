@@ -276,6 +276,176 @@ IT_ALLOWED_RESOURCES = [
     "zenith_operational_logs"
 ]
 
+IT_ROLE_ACCESS = {
+    "IT Manager": [
+        "company_handbook",
+        "identity_support",
+        "account_management",
+        "password_reset_tools",
+        "endpoint_management",
+        "remote_admin",
+        "device_inventory",
+        "network_logs",
+        "security_logs",
+        "event_viewer",
+        "telemetry_logs",
+        "file_server_admin",
+        "identity_server_admin",
+        "hq_admin_tools",
+        "hq_system_logs",
+        "hq_remote_services",
+        "zenith_event_viewer",
+        "zenith_node_status",
+        "zenith_operational_logs"
+    ],
+
+    "Senior Systems Administrator": [
+        "company_handbook",
+        "account_management",
+        "endpoint_management",
+        "remote_admin",
+        "device_inventory",
+        "network_logs",
+        "security_logs",
+        "event_viewer",
+        "telemetry_logs",
+        "file_server_admin",
+        "identity_server_admin",
+        "hq_admin_tools",
+        "hq_system_logs",
+        "hq_remote_services",
+        "zenith_event_viewer",
+        "zenith_node_status",
+        "zenith_operational_logs"
+    ],
+
+    "Systems Administrator": [
+        "company_handbook",
+        "account_management",
+        "endpoint_management",
+        "remote_admin",
+        "device_inventory",
+        "network_logs",
+        "event_viewer",
+        "telemetry_logs",
+        "file_server_admin",
+        "identity_server_admin",
+        "hq_system_logs",
+        "hq_remote_services",
+        "zenith_node_status"
+    ],
+
+    "Network Administrator": [
+        "company_handbook",
+        "endpoint_management",
+        "remote_admin",
+        "device_inventory",
+        "network_logs",
+        "security_logs",
+        "event_viewer",
+        "telemetry_logs",
+        "hq_system_logs",
+        "hq_remote_services",
+        "zenith_event_viewer",
+        "zenith_node_status"
+    ],
+
+    "Security Administrator": [
+        "company_handbook",
+        "endpoint_management",
+        "remote_admin",
+        "network_logs",
+        "security_logs",
+        "event_viewer",
+        "telemetry_logs",
+        "hq_system_logs",
+        "zenith_event_viewer",
+        "zenith_node_status",
+        "zenith_operational_logs"
+    ],
+
+    "Senior IT Support Engineer": [
+        "company_handbook",
+        "identity_support",
+        "account_management",
+        "password_reset_tools",
+        "endpoint_management",
+        "remote_admin",
+        "device_inventory",
+        "event_viewer"
+    ],
+
+    "IT Support Engineer": [
+        "company_handbook",
+        "identity_support",
+        "password_reset_tools",
+        "endpoint_management",
+        "remote_admin",
+        "device_inventory",
+        "event_viewer"
+    ],
+
+    "IT Support Technician": [
+        "company_handbook",
+        "identity_support",
+        "password_reset_tools",
+        "endpoint_management",
+        "device_inventory"
+    ],
+
+    "Identity and Access Administrator": [
+        "company_handbook",
+        "identity_support",
+        "account_management",
+        "password_reset_tools",
+        "identity_server_admin",
+        "security_logs",
+        "event_viewer",
+        "telemetry_logs",
+        "hq_system_logs"
+    ],
+
+    "Endpoint Administrator": [
+        "company_handbook",
+        "endpoint_management",
+        "remote_admin",
+        "device_inventory",
+        "network_logs",
+        "event_viewer",
+        "telemetry_logs"
+    ],
+
+    "Monitoring and Logging Analyst": [
+        "company_handbook",
+        "network_logs",
+        "security_logs",
+        "event_viewer",
+        "telemetry_logs",
+        "hq_system_logs",
+        "zenith_event_viewer",
+        "zenith_node_status",
+        "zenith_operational_logs"
+    ],
+
+    "Junior IT Support Technician": [
+        "company_handbook",
+        "identity_support",
+        "password_reset_tools",
+        "device_inventory"
+    ]
+}
+
+def get_it_role_access(role):
+    return IT_ROLE_ACCESS.get(
+        role,
+        []
+    )
+
+
+def can_it_role_access(role, resource):
+    allowed_resources = get_it_role_access(role)
+
+    return resource in allowed_resources
 
 def get_it_users():
     return IT_USERS
@@ -317,6 +487,48 @@ if __name__ == "__main__":
             f"{user.username}"
         )
 
+    print("\nRole Access Test")
+    print("----------------")
+
+    print(
+        "Alex accessing hq_admin_tools:",
+        can_it_role_access(
+            "IT Manager",
+            "hq_admin_tools"
+        )
+    )
+
+    print(
+        "Nathan accessing file_server_admin:",
+        can_it_role_access(
+            "Senior Systems Administrator",
+            "file_server_admin"
+        )
+    )
+
+    print(
+        "Erin accessing identity_server_admin:",
+        can_it_role_access(
+            "Identity and Access Administrator",
+            "identity_server_admin"
+        )
+    )
+
+    print(
+        "Lucy accessing zenith_event_viewer:",
+        can_it_role_access(
+            "Monitoring and Logging Analyst",
+            "zenith_event_viewer"
+        )
+    )
+
+    print(
+        "Sam accessing remote_admin:",
+        can_it_role_access(
+            "Junior IT Support Technician",
+            "remote_admin"
+        )
+    )
     print("\nEndpoints")
     print("---------")
 
