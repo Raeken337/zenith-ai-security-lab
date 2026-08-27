@@ -257,6 +257,86 @@ HR_ALLOWED_RESOURCES = [
     "absence_records"
 ]
 
+HR_ROLE_ACCESS = {
+    "HR Manager": [
+        "company_handbook",
+        "hr_records",
+        "employee_records",
+        "recruitment_files",
+        "training_records",
+        "absence_records"
+    ],
+
+    "Senior HR Advisor": [
+        "company_handbook",
+        "hr_records",
+        "employee_records",
+        "absence_records"
+    ],
+
+    "HR Advisor": [
+        "company_handbook",
+        "hr_records",
+        "employee_records",
+        "absence_records"
+    ],
+
+    "Recruitment Coordinator": [
+        "company_handbook",
+        "recruitment_files",
+        "employee_records"
+    ],
+
+    "Recruitment Advisor": [
+        "company_handbook",
+        "recruitment_files",
+        "employee_records"
+    ],
+
+    "Learning and Development Coordinator": [
+        "company_handbook",
+        "training_records",
+        "employee_records"
+    ],
+
+    "Employee Relations Advisor": [
+        "company_handbook",
+        "employee_records",
+        "absence_records",
+        "hr_records"
+    ],
+
+    "People Operations Administrator": [
+        "company_handbook",
+        "employee_records",
+        "absence_records"
+    ],
+
+    "HR Administrator": [
+        "company_handbook",
+        "employee_records",
+        "recruitment_files",
+        "training_records"
+    ],
+
+    "HR Assistant": [
+        "company_handbook",
+        "employee_records"
+    ]
+}
+
+def get_hr_role_access(role):
+    return HR_ROLE_ACCESS.get(
+        role,
+        []
+    )
+
+
+def can_hr_role_access(role, resource):
+    allowed_resources = get_hr_role_access(role)
+
+    return resource in allowed_resources
+
 
 def get_hr_users():
     return HR_USERS
@@ -298,6 +378,48 @@ if __name__ == "__main__":
             f"{user.username}"
         )
 
+    print("\nRole Access Test")
+    print("----------------")
+
+    print(
+        "Sarah accessing absence_records:",
+        can_hr_role_access(
+            "HR Manager",
+            "absence_records"
+        )
+    )
+
+    print(
+        "Mason accessing recruitment_files:",
+        can_hr_role_access(
+            "Recruitment Coordinator",
+            "recruitment_files"
+        )
+    )
+
+    print(
+        "Mason accessing training_records:",
+        can_hr_role_access(
+            "Recruitment Coordinator",
+            "training_records"
+        )
+    )
+
+    print(
+        "Leo accessing training_records:",
+        can_hr_role_access(
+            "Learning and Development Coordinator",
+            "training_records"
+        )
+    )
+
+    print(
+        "Archie accessing hr_records:",
+        can_hr_role_access(
+            "HR Assistant",
+            "hr_records"
+        )
+    )
     print("\nEndpoints")
     print("---------")
 
