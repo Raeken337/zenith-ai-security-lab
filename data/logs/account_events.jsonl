@@ -1,1 +1,3 @@
 {"timestamp": "2026-08-26T21:58:19.314135", "event_type": "password_reset", "username": "jake", "source_device": "PC-B1", "reason": "Password reset and account unlocked"}
+{"timestamp": "2026-08-27T17:28:35.271412", "event_type": "password_reset", "origin_service": "identity_server", "site": "HQ", "username": "jake", "source_device": "PC-FIN-01", "reason": "Password reset and account unlocked"}
+{"timestamp": "2026-08-27T17:51:56.635830", "event_type": "password_reset", "origin_service": "identity_server", "site": "HQ", "username": "jake", "source_device": "PC-FIN-01", "reason": "Password reset and account unlocked"}

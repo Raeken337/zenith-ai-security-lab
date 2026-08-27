@@ -74,7 +74,9 @@ def log_file_access_event(
     source_device,
     resource,
     access_granted,
-    reason
+    reason,
+    department=None,
+    role=None
 ):
     ensure_log_directory()
 
@@ -86,10 +88,16 @@ def log_file_access_event(
 
     event = {
         "timestamp": datetime.now().isoformat(),
-        "event_type": event_type,
+        "event_type": (
+            "file_access_success"
+            if access_granted
+            else "file_access_denied"
+        ),
         "origin_service": "file_server",
         "site": "HQ",
         "username": username,
+        "department": department,
+        "role": role,
         "source_device": source_device,
         "resource": resource,
         "access_granted": access_granted,
