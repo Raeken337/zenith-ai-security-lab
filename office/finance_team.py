@@ -175,7 +175,63 @@ FINANCE_ALLOWED_RESOURCES = [
     "finance_invoices"
 ]
 
+FINANCE_ROLE_ACCESS = {
+    "Finance Manager": [
+        "company_handbook",
+        "finance_payroll",
+        "finance_reports",
+        "finance_invoices"
+    ],
 
+    "Senior Accountant": [
+        "company_handbook",
+        "finance_reports",
+        "finance_invoices"
+    ],
+
+    "Financial Reporting Accountant": [
+        "company_handbook",
+        "finance_reports",
+        "finance_invoices"
+    ],
+
+    "Financial Analyst": [
+        "company_handbook",
+        "finance_reports"
+    ],
+
+    "Payroll Administrator": [
+        "company_handbook",
+        "finance_payroll"
+    ],
+
+    "Credit Controller": [
+        "company_handbook",
+        "finance_reports",
+        "finance_invoices"
+    ],
+
+    "Accounts Payable Assistant": [
+        "company_handbook",
+        "finance_invoices"
+    ],
+
+    "Finance Assistant": [
+        "company_handbook",
+        "finance_invoices"
+    ]
+}
+
+def get_finance_role_access(role):
+    return FINANCE_ROLE_ACCESS.get(
+        role,
+        []
+    )
+
+def can_finance_role_access(role, resource):
+    allowed_resources = get_finance_role_access(role)
+
+    return resource in allowed_resources
 def get_finance_users():
     return FINANCE_USERS
 
@@ -216,6 +272,33 @@ if __name__ == "__main__":
             f"{user.username}"
         )
 
+    print("\nRole Access Test")
+    print("----------------")
+
+    print(
+        "Jake accessing finance_reports:",
+        can_finance_role_access(
+            "Financial Analyst",
+            "finance_reports"
+        )
+    )
+
+    print(
+        "Jake accessing finance_payroll:",
+        can_finance_role_access(
+            "Financial Analyst",
+            "finance_payroll"
+        )
+    )
+
+    print(
+        "Grace accessing finance_payroll:",
+        can_finance_role_access(
+            "Finance Manager",
+            "finance_payroll"
+        )
+    )
+    
     print("\nEndpoints")
     print("---------")
 
