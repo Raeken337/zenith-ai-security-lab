@@ -44,148 +44,249 @@ MALICIOUS_EVENTS = [
 
 
 def generate_normal_event(user):
-    hour = random.randint(
-        user.work_start,
-        user.work_end
-    )
+    off_hours = random.choices(
+        [0, 1],
+        weights=[92, 8]
+    )[0]
+
+    if off_hours:
+        hour = random.choice([
+            random.randint(6, 7),
+            random.randint(18, 21)
+        ])
+    else:
+        hour = random.randint(
+            user.work_start,
+            user.work_end
+        )
+
+    failed_logins = random.choices(
+        [0, 1, 2],
+        weights=[88, 10, 2]
+    )[0]
+
+    denied_accesses = random.choices(
+        [0, 1],
+        weights=[95, 5]
+    )[0]
+
+    role_mismatch = random.choices(
+        [0, 1],
+        weights=[97, 3]
+    )[0]
 
     return {
         "username": user.username,
         "department": user.department,
         "role": user.role,
-        "event_type": random.choice(
-            NORMAL_EVENTS
-        ),
+        "event_type": random.choice([
+            "login_success",
+            "file_access_success"
+        ]),
         "hour": hour,
-        "failed_logins_10m": 0,
-        "denied_accesses_10m": 0,
+        "failed_logins_10m": failed_logins,
+        "denied_accesses_10m": denied_accesses,
         "unique_resources_30m": random.randint(
             1,
-            3
+            5
         ),
-        "off_hours": 0,
-        "role_mismatch": 0,
+        "off_hours": off_hours,
+        "role_mismatch": role_mismatch,
         "device_mismatch": 0,
         "label": "normal"
     }
 
 
 def generate_human_error_event(user):
-    hour = random.randint(
-        user.work_start,
-        user.work_end
+    off_hours = random.choices(
+        [0, 1],
+        weights=[85, 15]
+    )[0]
+
+    if off_hours:
+        hour = random.choice([
+            random.randint(6, 7),
+            random.randint(18, 22)
+        ])
+    else:
+        hour = random.randint(
+            user.work_start,
+            user.work_end
+        )
+
+    failed_logins = random.randint(
+        0,
+        4
     )
+
+    denied_accesses = random.randint(
+        0,
+        2
+    )
+
+    role_mismatch = random.choices(
+        [0, 1],
+        weights=[65, 35]
+    )[0]
+
+    device_mismatch = random.choices(
+        [0, 1],
+        weights=[95, 5]
+    )[0]
+
+    event_type = random.choice([
+        "login_failure",
+        "password_reset",
+        "file_access_denied",
+        "login_success"
+    ])
 
     return {
         "username": user.username,
         "department": user.department,
         "role": user.role,
-        "event_type": random.choice(
-            ERROR_EVENTS
-        ),
+        "event_type": event_type,
         "hour": hour,
-        "failed_logins_10m": random.randint(
-            1,
-            2
-        ),
-        "denied_accesses_10m": random.randint(
-            0,
-            1
-        ),
+        "failed_logins_10m": failed_logins,
+        "denied_accesses_10m": denied_accesses,
         "unique_resources_30m": random.randint(
             1,
-            3
+            5
         ),
-        "off_hours": 0,
-        "role_mismatch": random.randint(
-            0,
-            1
-        ),
-        "device_mismatch": 0,
+        "off_hours": off_hours,
+        "role_mismatch": role_mismatch,
+        "device_mismatch": device_mismatch,
         "label": "human_error"
     }
 
 
 def generate_suspicious_event(user):
-    hour = random.choice([
-        random.randint(0, 6),
-        random.randint(19, 23)
-    ])
+    off_hours = random.choices(
+        [0, 1],
+        weights=[50, 50]
+    )[0]
+
+    if off_hours:
+        hour = random.choice([
+            random.randint(0, 7),
+            random.randint(18, 23)
+        ])
+    else:
+        hour = random.randint(
+            user.work_start,
+            user.work_end
+        )
+
+    failed_logins = random.randint(
+        0,
+        5
+    )
+
+    denied_accesses = random.randint(
+        0,
+        4
+    )
+
+    role_mismatch = random.choices(
+        [0, 1],
+        weights=[45, 55]
+    )[0]
+
+    device_mismatch = random.choices(
+        [0, 1],
+        weights=[75, 25]
+    )[0]
 
     return {
         "username": user.username,
         "department": user.department,
         "role": user.role,
-        "event_type": random.choice(
-            SUSPICIOUS_EVENTS
-        ),
+        "event_type": random.choice([
+            "login_success",
+            "login_failure",
+            "file_access_success",
+            "file_access_denied"
+        ]),
         "hour": hour,
-        "failed_logins_10m": random.randint(
-            1,
-            4
-        ),
-        "denied_accesses_10m": random.randint(
-            1,
-            3
-        ),
+        "failed_logins_10m": failed_logins,
+        "denied_accesses_10m": denied_accesses,
         "unique_resources_30m": random.randint(
-            3,
-            6
+            2,
+            8
         ),
-        "off_hours": 1,
-        "role_mismatch": random.randint(
-            0,
-            1
-        ),
-        "device_mismatch": random.randint(
-            0,
-            1
-        ),
+        "off_hours": off_hours,
+        "role_mismatch": role_mismatch,
+        "device_mismatch": device_mismatch,
         "label": "suspicious"
     }
 
 
 def generate_malicious_event(user):
-    hour = random.choice([
-        random.randint(0, 5),
-        random.randint(20, 23)
-    ])
+    off_hours = random.choices(
+        [0, 1],
+        weights=[65, 35]
+    )[0]
+
+    if off_hours:
+        hour = random.choice([
+            random.randint(0, 7),
+            random.randint(18, 23)
+        ])
+    else:
+        hour = random.randint(
+            user.work_start,
+            user.work_end
+        )
+
+    failed_logins = random.randint(
+        0,
+        6
+    )
+
+    denied_accesses = random.randint(
+        0,
+        6
+    )
+
+    role_mismatch = random.choices(
+        [0, 1],
+        weights=[35, 65]
+    )[0]
+
+    device_mismatch = random.choices(
+        [0, 1],
+        weights=[60, 40]
+    )[0]
 
     return {
         "username": user.username,
         "department": user.department,
         "role": user.role,
-        "event_type": random.choice(
-            MALICIOUS_EVENTS
-        ),
+        "event_type": random.choice([
+            "login_success",
+            "login_failure",
+            "file_access_success",
+            "file_access_denied"
+        ]),
         "hour": hour,
-        "failed_logins_10m": random.randint(
-            3,
-            8
-        ),
-        "denied_accesses_10m": random.randint(
-            3,
-            8
-        ),
+        "failed_logins_10m": failed_logins,
+        "denied_accesses_10m": denied_accesses,
         "unique_resources_30m": random.randint(
-            5,
-            12
+            2,
+            10
         ),
-        "off_hours": 1,
-        "role_mismatch": 1,
-        "device_mismatch": random.randint(
-            0,
-            1
-        ),
+        "off_hours": off_hours,
+        "role_mismatch": role_mismatch,
+        "device_mismatch": device_mismatch,
         "label": "malicious"
     }
 
 
 def generate_dataset(
-    normal_count=1000,
-    human_error_count=500,
-    suspicious_count=500,
-    malicious_count=500
+    normal_count=4000,
+    human_error_count=2000,
+    suspicious_count=2000,
+    malicious_count=2000
 ):
     rows = []
 
