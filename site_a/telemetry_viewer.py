@@ -1,4 +1,5 @@
 import json
+import time
 from pathlib import Path
 
 
@@ -25,16 +26,18 @@ def load_events():
                 continue
 
             event = json.loads(line)
-
             events.append(event)
 
     return events
 
 
-def display_event(event, number):
+def display_event(event, number=None):
     print("\n" + "=" * 55)
 
-    print(f"EVENT #{number}")
+    if number is not None:
+        print(f"EVENT #{number}")
+    else:
+        print("LIVE EVENT")
 
     print("-" * 55)
 
@@ -106,10 +109,7 @@ def display_all_events():
 
     print("\nZENITH CENTRAL TELEMETRY")
     print("========================")
-
-    print(
-        f"Total events: {len(events)}"
-    )
+    print(f"Total events: {len(events)}")
 
     for number, event in enumerate(
         events,
@@ -121,5 +121,85 @@ def display_all_events():
         )
 
 
+def monitor_live_events():
+    print("\nZENITH LIVE TELEMETRY")
+    print("=====================")
+    print("Monitoring for new events...")
+    print("Press Ctrl+C to stop.\n")
+
+    while not CENTRAL_LOG_FILE.exists():
+        print(
+            "Waiting for Zenith telemetry file..."
+        )
+
+        time.sleep(1)
+
+    with CENTRAL_LOG_FILE.open(
+        "r",
+        encoding="utf-8"
+    ) as log_file:
+
+        log_file.seek(0, 2)
+
+        while True:
+            line = log_file.readline()
+
+            if not line:
+                time.sleep(0.5)
+                continue
+
+            line = line.strip()
+
+            if not line:
+                continue
+
+            try:
+                event = json.loads(line)
+
+                display_event(event)
+
+            except json.JSONDecodeError:
+                print(
+                    "Warning: Invalid telemetry event received."
+                )
+
+
+def main():
+    while True:
+        print("\nZENITH TELEMETRY VIEWER")
+        print("=======================")
+        print("1. View stored telemetry")
+        print("2. Monitor live telemetry")
+        print("3. Exit")
+
+        choice = input(
+            "\nSelect an option: "
+        )
+
+        if choice == "1":
+            display_all_events()
+
+        elif choice == "2":
+            try:
+                monitor_live_events()
+
+            except KeyboardInterrupt:
+                print(
+                    "\nLive monitoring stopped."
+                )
+
+        elif choice == "3":
+            print(
+                "Telemetry viewer closed."
+            )
+
+            break
+
+        else:
+            print(
+                "Invalid option."
+            )
+
+
 if __name__ == "__main__":
-    display_all_events()
+    main()
