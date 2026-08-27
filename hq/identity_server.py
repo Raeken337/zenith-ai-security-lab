@@ -7,32 +7,53 @@ from shared.logger import (
     log_account_event
 )
 
+from office.finance_team import get_finance_users
+from office.hr_team import get_hr_users
+from office.sales_team import get_sales_users
+from office.it_team import get_it_users
+from office.office_admin_team import get_office_admin_users
+
 
 HOST = "127.0.0.1"
 PORT = 5001
 
-
-USERS = {
-    "jake": {
-        "password": "Password123",
-        "department": "finance",
-        "groups": ["employees", "finance"]
-    },
-
-    "sarah": {
-        "password": "SecurePass456",
-        "department": "hr",
-        "groups": ["employees", "hr"]
-    }
-}
-
-
-SESSIONS = {}
-
 MAX_FAILED_ATTEMPTS = 3
+
 
 FAILED_ATTEMPTS = {}
 LOCKED_ACCOUNTS = set()
+SESSIONS = {}
+
+
+def load_company_users():
+    all_users = (
+        get_finance_users()
+        + get_hr_users()
+        + get_sales_users()
+        + get_it_users()
+        + get_office_admin_users()
+    )
+
+    user_directory = {}
+
+    for user in all_users:
+        user_directory[user.username] = {
+            "full_name": user.full_name,
+            "department": user.department,
+            "groups": user.groups,
+            "role": user.role,
+            "work_start": user.work_start,
+            "work_end": user.work_end,
+
+            # Lab-only credential.
+            # This is intentionally simple for the simulation.
+            "password": f"Zenith-{user.username}-2026!"
+        }
+
+    return user_directory
+
+
+USERS = load_company_users()
 
 
 def authenticate_user(username, password):
@@ -51,7 +72,9 @@ def authenticate_user(username, password):
         }
 
     if user["password"] != password:
-        FAILED_ATTEMPTS[username] = FAILED_ATTEMPTS.get(username, 0) + 1
+        FAILED_ATTEMPTS[username] = (
+            FAILED_ATTEMPTS.get(username, 0) + 1
+        )
 
         attempts = FAILED_ATTEMPTS[username]
 
@@ -60,14 +83,22 @@ def authenticate_user(username, password):
 
             return {
                 "authenticated": False,
-                "reason": "Account locked after repeated failed login attempts"
+                "reason": (
+                    "Account locked after repeated "
+                    "failed login attempts"
+                )
             }
 
-        remaining_attempts = MAX_FAILED_ATTEMPTS - attempts
+        remaining_attempts = (
+            MAX_FAILED_ATTEMPTS - attempts
+        )
 
         return {
             "authenticated": False,
-            "reason": f"Incorrect password. {remaining_attempts} attempts remaining"
+            "reason": (
+                f"Incorrect password. "
+                f"{remaining_attempts} attempts remaining"
+            )
         }
 
     FAILED_ATTEMPTS[username] = 0
@@ -76,8 +107,12 @@ def authenticate_user(username, password):
 
     SESSIONS[session_token] = {
         "username": username,
+        "full_name": user["full_name"],
         "department": user["department"],
-        "groups": user["groups"]
+        "groups": user["groups"],
+        "role": user["role"],
+        "work_start": user["work_start"],
+        "work_end": user["work_end"]
     }
 
     return {
@@ -85,8 +120,12 @@ def authenticate_user(username, password):
         "reason": "Login successful",
         "session_token": session_token,
         "username": username,
+        "full_name": user["full_name"],
         "department": user["department"],
-        "groups": user["groups"]
+        "groups": user["groups"],
+        "role": user["role"],
+        "work_start": user["work_start"],
+        "work_end": user["work_end"]
     }
 
 
@@ -103,12 +142,20 @@ def validate_session(session_token):
         "valid": True,
         "reason": "Session validated",
         "username": session["username"],
+        "full_name": session["full_name"],
         "department": session["department"],
-        "groups": session["groups"]
+        "groups": session["groups"],
+        "role": session["role"],
+        "work_start": session["work_start"],
+        "work_end": session["work_end"]
     }
 
 
-def reset_password(username, new_password, source_device):
+def reset_password(
+    username,
+    new_password,
+    source_device
+):
     user = USERS.get(username)
 
     if user is None:
@@ -120,7 +167,10 @@ def reset_password(username, new_password, source_device):
     if len(new_password) < 8:
         return {
             "reset_successful": False,
-            "reason": "Password must contain at least 8 characters"
+            "reason": (
+                "Password must contain "
+                "at least 8 characters"
+            )
         }
 
     user["password"] = new_password
@@ -138,7 +188,10 @@ def reset_password(username, new_password, source_device):
 
     return {
         "reset_successful": True,
-        "reason": "Password reset successful. Account unlocked."
+        "reason": (
+            "Password reset successful. "
+            "Account unlocked."
+        )
     }
 
 
@@ -150,24 +203,51 @@ def handle_request(request):
         password = request["password"]
         source_device = request["source_device"]
 
-        print(f"Login attempt for user: {username}")
-        print(f"Source device: {source_device}")
+        print(
+            f"\nLogin attempt for user: {username}"
+        )
+
+        print(
+            f"Source device: {source_device}"
+        )
 
         response = authenticate_user(
             username,
             password
         )
 
+        user = USERS.get(username)
+
         log_login_event(
             username=username,
             source_device=source_device,
             authenticated=response["authenticated"],
             reason=response["reason"],
-            department=response.get("department"),
-            groups=response.get("groups")
+            department=(
+                user["department"]
+                if user
+                else None
+            ),
+            groups=(
+                user["groups"]
+                if user
+                else None
+            ),
+            role=(
+                user["role"]
+                if user
+                else None
+            )
         )
 
         return response
+
+    if action == "validate_session":
+        session_token = request["session_token"]
+
+        return validate_session(
+            session_token
+        )
 
     if action == "reset_password":
         username = request["username"]
@@ -180,10 +260,27 @@ def handle_request(request):
             source_device
         )
 
-    if action == "validate_session":
-        session_token = request["session_token"]
-
-        return validate_session(session_token)
+    if action == "directory_summary":
+        return {
+            "user_count": len(USERS),
+            "departments": {
+                "finance": len(
+                    get_finance_users()
+                ),
+                "hr": len(
+                    get_hr_users()
+                ),
+                "sales": len(
+                    get_sales_users()
+                ),
+                "it": len(
+                    get_it_users()
+                ),
+                "office_admin": len(
+                    get_office_admin_users()
+                )
+            }
+        }
 
     return {
         "error": True,
@@ -197,24 +294,47 @@ def start_identity_server():
         socket.SOCK_STREAM
     )
 
-    server_socket.bind((HOST, PORT))
+    server_socket.bind(
+        (HOST, PORT)
+    )
+
     server_socket.listen()
 
-    print(f"Identity Server listening on {HOST}:{PORT}")
+    print(
+        f"Identity Server listening "
+        f"on {HOST}:{PORT}"
+    )
+
+    print(
+        f"Loaded users: {len(USERS)}"
+    )
 
     while True:
-        client_socket, client_address = server_socket.accept()
+        client_socket, client_address = (
+            server_socket.accept()
+        )
 
-        print(f"\nConnection received from {client_address}")
+        print(
+            f"\nConnection received "
+            f"from {client_address}"
+        )
 
-        raw_message = client_socket.recv(4096).decode("utf-8")
+        raw_message = client_socket.recv(
+            4096
+        ).decode("utf-8")
 
-        request = json.loads(raw_message)
+        request = json.loads(
+            raw_message
+        )
 
-        response = handle_request(request)
+        response = handle_request(
+            request
+        )
 
-        client_socket.send(
-            json.dumps(response).encode("utf-8")
+        client_socket.sendall(
+            json.dumps(response).encode(
+                "utf-8"
+            )
         )
 
         client_socket.close()
