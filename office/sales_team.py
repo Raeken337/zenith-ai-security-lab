@@ -319,6 +319,87 @@ SALES_ALLOWED_RESOURCES = [
     "product_information"
 ]
 
+SALES_ROLE_ACCESS = {
+    "Sales Manager": [
+        "company_handbook",
+        "sales_crm",
+        "customer_accounts",
+        "sales_reports",
+        "pricing_documents",
+        "product_information"
+    ],
+
+    "Senior Sales Executive": [
+        "company_handbook",
+        "sales_crm",
+        "customer_accounts",
+        "sales_reports",
+        "pricing_documents",
+        "product_information"
+    ],
+
+    "Sales Executive": [
+        "company_handbook",
+        "sales_crm",
+        "customer_accounts",
+        "pricing_documents",
+        "product_information"
+    ],
+
+    "Account Executive": [
+        "company_handbook",
+        "sales_crm",
+        "customer_accounts",
+        "sales_reports",
+        "product_information"
+    ],
+
+    "Business Development Executive": [
+        "company_handbook",
+        "sales_crm",
+        "customer_accounts",
+        "pricing_documents",
+        "product_information"
+    ],
+
+    "Sales Support Coordinator": [
+        "company_handbook",
+        "sales_crm",
+        "customer_accounts",
+        "sales_reports"
+    ],
+
+    "Sales Support Assistant": [
+        "company_handbook",
+        "sales_crm",
+        "customer_accounts"
+    ],
+
+    "Sales Administrator": [
+        "company_handbook",
+        "sales_crm",
+        "customer_accounts",
+        "sales_reports"
+    ],
+
+    "Junior Sales Executive": [
+        "company_handbook",
+        "sales_crm",
+        "product_information"
+    ]
+}
+
+def get_sales_role_access(role):
+    return SALES_ROLE_ACCESS.get(
+        role,
+        []
+    )
+
+
+def can_sales_role_access(role, resource):
+    allowed_resources = get_sales_role_access(role)
+
+    return resource in allowed_resources
 
 def get_sales_users():
     return SALES_USERS
@@ -360,6 +441,48 @@ if __name__ == "__main__":
             f"{user.username}"
         )
 
+    print("\nRole Access Test")
+    print("----------------")
+
+    print(
+        "Lucas accessing sales_reports:",
+        can_sales_role_access(
+            "Sales Manager",
+            "sales_reports"
+        )
+    )
+
+    print(
+        "Ruby accessing pricing_documents:",
+        can_sales_role_access(
+            "Sales Executive",
+            "pricing_documents"
+        )
+    )
+
+    print(
+        "Ruby accessing sales_reports:",
+        can_sales_role_access(
+            "Sales Executive",
+            "sales_reports"
+        )
+    )
+
+    print(
+        "Theo accessing product_information:",
+        can_sales_role_access(
+            "Junior Sales Executive",
+            "product_information"
+        )
+    )
+
+    print(
+        "Theo accessing customer_accounts:",
+        can_sales_role_access(
+            "Junior Sales Executive",
+            "customer_accounts"
+        )
+    )
     print("\nEndpoints")
     print("---------")
 
