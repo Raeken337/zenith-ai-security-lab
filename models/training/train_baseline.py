@@ -439,6 +439,236 @@ def evaluate_model(
             ]
     }
 
+def show_random_forest_feature_importance(
+    pipeline,
+    top_n=20
+):
+    preprocessor = pipeline.named_steps[
+        "preprocessor"
+    ]
+
+    classifier = pipeline.named_steps[
+        "classifier"
+    ]
+
+    categorical_transformer = (
+        preprocessor.named_transformers_[
+            "categorical"
+        ]
+    )
+
+    categorical_names = (
+        categorical_transformer
+        .get_feature_names_out(
+            categorical_features
+        )
+    )
+
+    feature_names = list(
+        categorical_names
+    ) + numeric_features
+
+    importances = (
+        classifier.feature_importances_
+    )
+
+    importance_table = pd.DataFrame({
+        "feature": feature_names,
+        "importance": importances
+    })
+
+    importance_table = (
+        importance_table
+        .sort_values(
+            by="importance",
+            ascending=False
+        )
+        .head(top_n)
+    )
+
+    print(
+        "\nRANDOM FOREST FEATURE IMPORTANCE"
+    )
+
+    print(
+        "================================"
+    )
+
+    print(
+        importance_table.to_string(
+            index=False
+        )
+    )
+
+    return importance_table
+
+def run_ablation_experiment(
+    model_name,
+    classifier,
+    removed_features
+):
+    ablation_features = [
+        feature
+        for feature in FEATURES
+        if feature not in removed_features
+    ]
+
+    ablation_categorical = [
+        feature
+        for feature in categorical_features
+        if feature in ablation_features
+    ]
+
+    ablation_numeric = [
+        feature
+        for feature in numeric_features
+        if feature in ablation_features
+    ]
+
+    ablation_preprocessor = (
+        ColumnTransformer(
+            transformers=[
+                (
+                    "categorical",
+                    OneHotEncoder(
+                        handle_unknown="ignore"
+                    ),
+                    ablation_categorical
+                ),
+                (
+                    "numeric",
+                    StandardScaler(),
+                    ablation_numeric
+                )
+            ]
+        )
+    )
+
+    ablation_pipeline = Pipeline(
+        steps=[
+            (
+                "preprocessor",
+                ablation_preprocessor
+            ),
+            (
+                "classifier",
+                classifier
+            )
+        ]
+    )
+
+    X_ablation = dataset[
+        ablation_features
+    ]
+
+    (
+        X_train_ablation,
+        X_test_ablation,
+        y_train_ablation,
+        y_test_ablation
+    ) = train_test_split(
+        X_ablation,
+        y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y
+    )
+
+    ablation_pipeline.fit(
+        X_train_ablation,
+        y_train_ablation
+    )
+
+    predictions = (
+        ablation_pipeline.predict(
+            X_test_ablation
+        )
+    )
+
+    accuracy = accuracy_score(
+        y_test_ablation,
+        predictions
+    )
+
+    macro_f1 = f1_score(
+        y_test_ablation,
+        predictions,
+        average="macro"
+    )
+
+    zenith_metrics = (
+        calculate_zenith_metrics(
+            y_test_ablation,
+            predictions
+        )
+    )
+
+    return {
+        "model": model_name,
+        "removed": ", ".join(
+            removed_features
+        ),
+        "accuracy": accuracy,
+        "macro_f1": macro_f1,
+
+        "human_error_escalation":
+            zenith_metrics[
+                "human_error_escalation_rate"
+            ],
+
+        "malicious_normal_miss":
+            zenith_metrics[
+                "malicious_normal_miss_rate"
+            ],
+
+        "security_detection":
+            zenith_metrics[
+                "security_detection_rate"
+            ]
+    }
+
+ABLATION_TESTS = [
+    [
+        "recent_password_reset"
+    ],
+
+    [
+        "successful_recovery"
+    ],
+
+    [
+        "department_resource_mismatch"
+    ],
+
+    [
+        "resource_sensitivity"
+    ],
+
+    [
+        "recent_endpoints_used"
+    ],
+
+    [
+        "time_since_last_event_seconds"
+    ],
+
+    [
+        "sequence_pattern"
+    ],
+
+    [
+        "historical_user_deviation"
+    ],
+
+    [
+        "user_baseline_risk"
+    ],
+
+    [
+        "repeated_resource_accesses",
+        "resource_traversal_count"
+    ]
+]
 
 print(
     "\nZENITH BASELINE MODEL COMPARISON"
@@ -454,6 +684,9 @@ random_forest_results = evaluate_model(
     random_forest_pipeline
 )
 
+show_random_forest_feature_importance(
+    random_forest_pipeline
+)
 
 logistic_regression_results = evaluate_model(
     "Logistic Regression",
@@ -480,3 +713,4 @@ print(
         index=False
     )
 )
+
