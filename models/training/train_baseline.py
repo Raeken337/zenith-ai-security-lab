@@ -48,13 +48,30 @@ FEATURES = [
     "department",
     "role",
     "event_type",
+
     "hour",
     "failed_logins_10m",
     "denied_accesses_10m",
     "unique_resources_30m",
+
     "off_hours",
     "role_mismatch",
-    "device_mismatch"
+    "device_mismatch",
+
+    "recent_password_reset",
+    "successful_recovery",
+    "department_resource_mismatch",
+    "resource_sensitivity",
+    "recent_endpoints_used",
+    "time_since_last_event_seconds",
+
+    "sequence_pattern",
+
+    "historical_user_deviation",
+    "user_baseline_risk",
+
+    "repeated_resource_accesses",
+    "resource_traversal_count"
 ]
 
 
@@ -68,7 +85,8 @@ y = dataset[TARGET]
 categorical_features = [
     "department",
     "role",
-    "event_type"
+    "event_type",
+    "sequence_pattern"
 ]
 
 
@@ -77,9 +95,24 @@ numeric_features = [
     "failed_logins_10m",
     "denied_accesses_10m",
     "unique_resources_30m",
+
     "off_hours",
     "role_mismatch",
-    "device_mismatch"
+    "device_mismatch",
+
+    "recent_password_reset",
+    "successful_recovery",
+    "department_resource_mismatch",
+
+    "resource_sensitivity",
+    "recent_endpoints_used",
+    "time_since_last_event_seconds",
+
+    "historical_user_deviation",
+    "user_baseline_risk",
+
+    "repeated_resource_accesses",
+    "resource_traversal_count"
 ]
 
 
