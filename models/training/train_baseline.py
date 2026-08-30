@@ -44,7 +44,10 @@ dataset = pd.read_csv(
 )
 
 
-FEATURES = [
+TARGET = "label"
+
+
+FULL_FEATURES = [
     "department",
     "role",
     "event_type",
@@ -60,8 +63,10 @@ FEATURES = [
 
     "recent_password_reset",
     "successful_recovery",
+
     "department_resource_mismatch",
     "resource_sensitivity",
+
     "recent_endpoints_used",
     "time_since_last_event_seconds",
 
@@ -75,14 +80,37 @@ FEATURES = [
 ]
 
 
-TARGET = "label"
+SELECTED_FEATURES = [
+    "department",
+    "role",
+    "event_type",
+
+    "hour",
+
+    "failed_logins_10m",
+    "denied_accesses_10m",
+    "unique_resources_30m",
+
+    "off_hours",
+
+    "role_mismatch",
+    "device_mismatch",
+
+    "recent_password_reset",
+    "successful_recovery",
+
+    "department_resource_mismatch",
+    "resource_sensitivity",
+
+    "recent_endpoints_used",
+    "time_since_last_event_seconds",
+
+    "repeated_resource_accesses",
+    "resource_traversal_count"
+]
 
 
-X = dataset[FEATURES]
-y = dataset[TARGET]
-
-
-categorical_features = [
+ALL_CATEGORICAL_FEATURES = [
     "department",
     "role",
     "event_type",
@@ -90,21 +118,24 @@ categorical_features = [
 ]
 
 
-numeric_features = [
+ALL_NUMERIC_FEATURES = [
     "hour",
+
     "failed_logins_10m",
     "denied_accesses_10m",
     "unique_resources_30m",
 
     "off_hours",
+
     "role_mismatch",
     "device_mismatch",
 
     "recent_password_reset",
     "successful_recovery",
-    "department_resource_mismatch",
 
+    "department_resource_mismatch",
     "resource_sensitivity",
+
     "recent_endpoints_used",
     "time_since_last_event_seconds",
 
@@ -116,7 +147,69 @@ numeric_features = [
 ]
 
 
-def build_preprocessor():
+X_full = dataset[
+    FULL_FEATURES
+]
+
+
+X_selected = dataset[
+    SELECTED_FEATURES
+]
+
+
+y = dataset[TARGET]
+
+
+train_indices, test_indices = (
+    train_test_split(
+        dataset.index,
+        test_size=0.2,
+        random_state=42,
+        stratify=y
+    )
+)
+
+
+X_full_train = X_full.loc[
+    train_indices
+]
+
+X_full_test = X_full.loc[
+    test_indices
+]
+
+
+X_selected_train = X_selected.loc[
+    train_indices
+]
+
+X_selected_test = X_selected.loc[
+    test_indices
+]
+
+
+y_train = y.loc[
+    train_indices
+]
+
+y_test = y.loc[
+    test_indices
+]
+
+
+def build_preprocessor(features):
+    categorical_features = [
+        feature
+        for feature in ALL_CATEGORICAL_FEATURES
+        if feature in features
+    ]
+
+    numeric_features = [
+        feature
+        for feature in ALL_NUMERIC_FEATURES
+        if feature in features
+    ]
+
     return ColumnTransformer(
         transformers=[
             (
@@ -135,49 +228,24 @@ def build_preprocessor():
     )
 
 
-random_forest_pipeline = Pipeline(
-    steps=[
-        (
-            "preprocessor",
-            build_preprocessor()
-        ),
-        (
-            "classifier",
-            RandomForestClassifier(
-                n_estimators=100,
-                random_state=42
+def build_pipeline(
+    classifier,
+    features
+):
+    return Pipeline(
+        steps=[
+            (
+                "preprocessor",
+                build_preprocessor(
+                    features
+                )
+            ),
+            (
+                "classifier",
+                classifier
             )
-        )
-    ]
-)
-
-
-logistic_regression_pipeline = Pipeline(
-    steps=[
-        (
-            "preprocessor",
-            build_preprocessor()
-        ),
-        (
-            "classifier",
-            LogisticRegression(
-                max_iter=1000,
-                random_state=42
-            )
-        )
-    ]
-)
-
-
-X_train, X_test, y_train, y_test = (
-    train_test_split(
-        X,
-        y,
-        test_size=0.2,
-        random_state=42,
-        stratify=y
+        ]
     )
-)
 
 
 def calculate_zenith_metrics(
@@ -193,12 +261,16 @@ def calculate_zenith_metrics(
         results["actual"] == "human_error"
     ]
 
-    human_error_escalations = human_error_cases[
-        human_error_cases["predicted"].isin([
-            "suspicious",
-            "malicious"
-        ])
-    ]
+    human_error_escalations = (
+        human_error_cases[
+            human_error_cases[
+                "predicted"
+            ].isin([
+                "suspicious",
+                "malicious"
+            ])
+        ]
+    )
 
     human_error_escalation_rate = (
         len(human_error_escalations)
@@ -212,9 +284,13 @@ def calculate_zenith_metrics(
         results["actual"] == "malicious"
     ]
 
-    malicious_to_normal = malicious_cases[
-        malicious_cases["predicted"] == "normal"
-    ]
+    malicious_to_normal = (
+        malicious_cases[
+            malicious_cases[
+                "predicted"
+            ] == "normal"
+        ]
+    )
 
     malicious_normal_miss_rate = (
         len(malicious_to_normal)
@@ -224,9 +300,13 @@ def calculate_zenith_metrics(
     )
 
 
-    malicious_to_suspicious = malicious_cases[
-        malicious_cases["predicted"] == "suspicious"
-    ]
+    malicious_to_suspicious = (
+        malicious_cases[
+            malicious_cases[
+                "predicted"
+            ] == "suspicious"
+        ]
+    )
 
     malicious_suspicious_rate = (
         len(malicious_to_suspicious)
@@ -240,9 +320,13 @@ def calculate_zenith_metrics(
         results["actual"] == "suspicious"
     ]
 
-    suspicious_to_normal = suspicious_cases[
-        suspicious_cases["predicted"] == "normal"
-    ]
+    suspicious_to_normal = (
+        suspicious_cases[
+            suspicious_cases[
+                "predicted"
+            ] == "normal"
+        ]
+    )
 
     suspicious_normal_miss_rate = (
         len(suspicious_to_normal)
@@ -298,7 +382,11 @@ def calculate_zenith_metrics(
 
 def evaluate_model(
     model_name,
-    pipeline
+    pipeline,
+    X_train,
+    X_test,
+    y_train,
+    y_test
 ):
     print(
         f"\n{model_name.upper()}"
@@ -315,11 +403,6 @@ def evaluate_model(
 
     predictions = pipeline.predict(
         X_test
-    )
-
-    zenith_metrics = calculate_zenith_metrics(
-        y_test,
-        predictions
     )
 
     accuracy = accuracy_score(
@@ -339,6 +422,14 @@ def evaluate_model(
         average="weighted"
     )
 
+    zenith_metrics = (
+        calculate_zenith_metrics(
+            y_test,
+            predictions
+        )
+    )
+
+
     print(
         f"\nAccuracy: "
         f"{accuracy:.4f}"
@@ -353,6 +444,7 @@ def evaluate_model(
         f"Weighted F1: "
         f"{weighted_f1:.4f}"
     )
+
 
     print(
         "\nClassification Report"
@@ -369,6 +461,7 @@ def evaluate_model(
         )
     )
 
+
     print(
         "Confusion Matrix"
     )
@@ -383,6 +476,7 @@ def evaluate_model(
             predictions
         )
     )
+
 
     print(
         "\nZenith Security Metrics"
@@ -417,11 +511,18 @@ def evaluate_model(
         f"{zenith_metrics['security_detection_rate']:.2%}"
     )
 
+
     return {
         "model": model_name,
-        "accuracy": accuracy,
-        "macro_f1": macro_f1,
-        "weighted_f1": weighted_f1,
+
+        "accuracy":
+            accuracy,
+
+        "macro_f1":
+            macro_f1,
+
+        "weighted_f1":
+            weighted_f1,
 
         "human_error_escalation":
             zenith_metrics[
@@ -439,273 +540,114 @@ def evaluate_model(
             ]
     }
 
-def show_random_forest_feature_importance(
-    pipeline,
-    top_n=20
-):
-    preprocessor = pipeline.named_steps[
-        "preprocessor"
-    ]
 
-    classifier = pipeline.named_steps[
-        "classifier"
-    ]
-
-    categorical_transformer = (
-        preprocessor.named_transformers_[
-            "categorical"
-        ]
-    )
-
-    categorical_names = (
-        categorical_transformer
-        .get_feature_names_out(
-            categorical_features
-        )
-    )
-
-    feature_names = list(
-        categorical_names
-    ) + numeric_features
-
-    importances = (
-        classifier.feature_importances_
-    )
-
-    importance_table = pd.DataFrame({
-        "feature": feature_names,
-        "importance": importances
-    })
-
-    importance_table = (
-        importance_table
-        .sort_values(
-            by="importance",
-            ascending=False
-        )
-        .head(top_n)
-    )
-
-    print(
-        "\nRANDOM FOREST FEATURE IMPORTANCE"
-    )
-
-    print(
-        "================================"
-    )
-
-    print(
-        importance_table.to_string(
-            index=False
-        )
-    )
-
-    return importance_table
-
-def run_ablation_experiment(
-    model_name,
-    classifier,
-    removed_features
-):
-    ablation_features = [
-        feature
-        for feature in FEATURES
-        if feature not in removed_features
-    ]
-
-    ablation_categorical = [
-        feature
-        for feature in categorical_features
-        if feature in ablation_features
-    ]
-
-    ablation_numeric = [
-        feature
-        for feature in numeric_features
-        if feature in ablation_features
-    ]
-
-    ablation_preprocessor = (
-        ColumnTransformer(
-            transformers=[
-                (
-                    "categorical",
-                    OneHotEncoder(
-                        handle_unknown="ignore"
-                    ),
-                    ablation_categorical
-                ),
-                (
-                    "numeric",
-                    StandardScaler(),
-                    ablation_numeric
-                )
-            ]
-        )
-    )
-
-    ablation_pipeline = Pipeline(
-        steps=[
-            (
-                "preprocessor",
-                ablation_preprocessor
-            ),
-            (
-                "classifier",
-                classifier
-            )
-        ]
-    )
-
-    X_ablation = dataset[
-        ablation_features
-    ]
-
-    (
-        X_train_ablation,
-        X_test_ablation,
-        y_train_ablation,
-        y_test_ablation
-    ) = train_test_split(
-        X_ablation,
-        y,
-        test_size=0.2,
-        random_state=42,
-        stratify=y
-    )
-
-    ablation_pipeline.fit(
-        X_train_ablation,
-        y_train_ablation
-    )
-
-    predictions = (
-        ablation_pipeline.predict(
-            X_test_ablation
-        )
-    )
-
-    accuracy = accuracy_score(
-        y_test_ablation,
-        predictions
-    )
-
-    macro_f1 = f1_score(
-        y_test_ablation,
-        predictions,
-        average="macro"
-    )
-
-    zenith_metrics = (
-        calculate_zenith_metrics(
-            y_test_ablation,
-            predictions
-        )
-    )
-
-    return {
-        "model": model_name,
-        "removed": ", ".join(
-            removed_features
-        ),
-        "accuracy": accuracy,
-        "macro_f1": macro_f1,
-
-        "human_error_escalation":
-            zenith_metrics[
-                "human_error_escalation_rate"
-            ],
-
-        "malicious_normal_miss":
-            zenith_metrics[
-                "malicious_normal_miss_rate"
-            ],
-
-        "security_detection":
-            zenith_metrics[
-                "security_detection_rate"
-            ]
-    }
-
-ABLATION_TESTS = [
-    [
-        "recent_password_reset"
-    ],
-
-    [
-        "successful_recovery"
-    ],
-
-    [
-        "department_resource_mismatch"
-    ],
-
-    [
-        "resource_sensitivity"
-    ],
-
-    [
-        "recent_endpoints_used"
-    ],
-
-    [
-        "time_since_last_event_seconds"
-    ],
-
-    [
-        "sequence_pattern"
-    ],
-
-    [
-        "historical_user_deviation"
-    ],
-
-    [
-        "user_baseline_risk"
-    ],
-
-    [
-        "repeated_resource_accesses",
-        "resource_traversal_count"
-    ]
-]
-
-print(
-    "\nZENITH BASELINE MODEL COMPARISON"
-)
-
-print(
-    "================================"
+rf_full = build_pipeline(
+    RandomForestClassifier(
+        n_estimators=100,
+        random_state=42
+    ),
+    FULL_FEATURES
 )
 
 
-random_forest_results = evaluate_model(
-    "Random Forest",
-    random_forest_pipeline
-)
-
-show_random_forest_feature_importance(
-    random_forest_pipeline
-)
-
-logistic_regression_results = evaluate_model(
-    "Logistic Regression",
-    logistic_regression_pipeline
+rf_selected = build_pipeline(
+    RandomForestClassifier(
+        n_estimators=100,
+        random_state=42
+    ),
+    SELECTED_FEATURES
 )
 
 
-comparison = pd.DataFrame([
-    random_forest_results,
-    logistic_regression_results
-])
+lr_full = build_pipeline(
+    LogisticRegression(
+        max_iter=1000,
+        random_state=42
+    ),
+    FULL_FEATURES
+)
+
+
+lr_selected = build_pipeline(
+    LogisticRegression(
+        max_iter=1000,
+        random_state=42
+    ),
+    SELECTED_FEATURES
+)
 
 
 print(
-    "\nMODEL COMPARISON"
+    "\nZENITH FEATURE SELECTION TEST"
 )
 
 print(
-    "================"
+    "============================="
+)
+
+
+results = []
+
+
+results.append(
+    evaluate_model(
+        "Random Forest - Full",
+        rf_full,
+        X_full_train,
+        X_full_test,
+        y_train,
+        y_test
+    )
+)
+
+
+results.append(
+    evaluate_model(
+        "Random Forest - Selected",
+        rf_selected,
+        X_selected_train,
+        X_selected_test,
+        y_train,
+        y_test
+    )
+)
+
+
+results.append(
+    evaluate_model(
+        "Logistic Regression - Full",
+        lr_full,
+        X_full_train,
+        X_full_test,
+        y_train,
+        y_test
+    )
+)
+
+
+results.append(
+    evaluate_model(
+        "Logistic Regression - Selected",
+        lr_selected,
+        X_selected_train,
+        X_selected_test,
+        y_train,
+        y_test
+    )
+)
+
+
+comparison = pd.DataFrame(
+    results
+)
+
+
+print(
+    "\nFEATURE SELECTION COMPARISON"
+)
+
+print(
+    "============================"
 )
 
 print(
@@ -713,4 +655,3 @@ print(
         index=False
     )
 )
-
