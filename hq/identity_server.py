@@ -233,6 +233,23 @@ def validate_session(session_token):
     }
 
 
+def invalidate_user_sessions(username):
+    session_tokens_to_remove = [
+        session_token
+        for session_token, session in SESSIONS.items()
+        if session["username"] == username
+    ]
+
+    for session_token in session_tokens_to_remove:
+        SESSIONS.pop(
+            session_token,
+            None
+        )
+
+    return len(
+        session_tokens_to_remove
+    )
+
 def reset_password(
     username,
     new_password,
@@ -261,19 +278,32 @@ def reset_password(
 
     LOCKED_ACCOUNTS.discard(username)
 
+    invalidated_session_count = (
+        invalidate_user_sessions(
+            username
+        )
+    )
+
     log_account_event(
         username=username,
         source_device=source_device,
         event_type="password_reset",
-        reason="Password reset and account unlocked"
+        reason=(
+            "Password reset, account unlocked "
+            f"and {invalidated_session_count} "
+            "active session(s) invalidated"
+        )
     )
 
     return {
         "reset_successful": True,
         "reason": (
             "Password reset successful. "
-            "Account unlocked."
-        )
+            "Account unlocked and existing "
+            "sessions invalidated."
+        ),
+        "invalidated_sessions":
+            invalidated_session_count
     }
 
 
@@ -373,6 +403,24 @@ def handle_request(request):
         username = request["username"]
         new_password = request["new_password"]
         source_device = request["source_device"]
+
+        endpoint_validation = validate_endpoint(
+            username,
+            source_device
+        )
+
+        if not endpoint_validation["valid"]:
+            log_account_event(
+                username=username,
+                source_device=source_device,
+                event_type="password_reset_denied",
+                reason=endpoint_validation["reason"]
+            )
+
+            return {
+                "reset_successful": False,
+                "reason": endpoint_validation["reason"]
+            }
 
         return reset_password(
             username,
