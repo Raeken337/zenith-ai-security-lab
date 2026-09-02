@@ -109,6 +109,43 @@ SELECTED_FEATURES = [
     "resource_traversal_count"
 ]
 
+FEATURE_GROUPS = {
+    "authentication_recovery": [
+        "event_type",
+        "failed_logins_10m",
+        "recent_password_reset",
+        "successful_recovery"
+    ],
+
+    "identity_role": [
+        "department",
+        "role",
+        "role_mismatch"
+    ],
+
+    "resource_context": [
+        "denied_accesses_10m",
+        "unique_resources_30m",
+        "department_resource_mismatch",
+        "resource_sensitivity"
+    ],
+
+    "endpoint_context": [
+        "device_mismatch",
+        "recent_endpoints_used"
+    ],
+
+    "temporal_context": [
+        "hour",
+        "off_hours",
+        "time_since_last_event_seconds"
+    ],
+
+    "traversal_context": [
+        "repeated_resource_accesses",
+        "resource_traversal_count"
+    ]
+}
 
 ALL_CATEGORICAL_FEATURES = [
     "department",
@@ -540,6 +577,197 @@ def evaluate_model(
             ]
     }
 
+def validate_feature_groups():
+    grouped_features = [
+        feature
+        for features in FEATURE_GROUPS.values()
+        for feature in features
+    ]
+
+    missing_features = (
+        set(SELECTED_FEATURES)
+        - set(grouped_features)
+    )
+
+    unexpected_features = (
+        set(grouped_features)
+        - set(SELECTED_FEATURES)
+    )
+
+    duplicated_features = {
+        feature
+        for feature in grouped_features
+        if grouped_features.count(feature) > 1
+    }
+
+    if (
+        missing_features
+        or unexpected_features
+        or duplicated_features
+    ):
+        raise ValueError({
+            "missing_features":
+                sorted(missing_features),
+
+            "unexpected_features":
+                sorted(unexpected_features),
+
+            "duplicated_features":
+                sorted(duplicated_features)
+        })
+
+
+def run_group_ablation_experiment(
+    baseline_result
+):
+    validate_feature_groups()
+
+    ablation_results = []
+
+    baseline_row = baseline_result.copy()
+
+    baseline_row["removed_group"] = (
+        "none_baseline"
+    )
+
+    baseline_row["feature_count"] = len(
+        SELECTED_FEATURES
+    )
+
+    ablation_results.append(
+        baseline_row
+    )
+
+    for group_name, removed_features in (
+        FEATURE_GROUPS.items()
+    ):
+        remaining_features = [
+            feature
+            for feature in SELECTED_FEATURES
+            if feature not in removed_features
+        ]
+
+        X_ablation = dataset[
+            remaining_features
+        ]
+
+        X_ablation_train = X_ablation.loc[
+            train_indices
+        ]
+
+        X_ablation_test = X_ablation.loc[
+            test_indices
+        ]
+
+        ablation_pipeline = build_pipeline(
+            RandomForestClassifier(
+                n_estimators=100,
+                random_state=42
+            ),
+            remaining_features
+        )
+
+        result = evaluate_model(
+            (
+                "Random Forest - Without "
+                f"{group_name}"
+            ),
+            ablation_pipeline,
+            X_ablation_train,
+            X_ablation_test,
+            y_train,
+            y_test
+        )
+
+        result["removed_group"] = group_name
+
+        result["feature_count"] = len(
+            remaining_features
+        )
+
+        ablation_results.append(
+            result
+        )
+
+    ablation_comparison = pd.DataFrame(
+        ablation_results
+    )
+
+    baseline_accuracy = baseline_row[
+        "accuracy"
+    ]
+
+    baseline_macro_f1 = baseline_row[
+        "macro_f1"
+    ]
+
+    baseline_human_error = baseline_row[
+        "human_error_escalation"
+    ]
+
+    baseline_detection = baseline_row[
+        "security_detection"
+    ]
+
+    ablation_comparison[
+        "accuracy_change"
+    ] = (
+        ablation_comparison["accuracy"]
+        - baseline_accuracy
+    )
+
+    ablation_comparison[
+        "macro_f1_change"
+    ] = (
+        ablation_comparison["macro_f1"]
+        - baseline_macro_f1
+    )
+
+    ablation_comparison[
+        "human_error_change"
+    ] = (
+        ablation_comparison[
+            "human_error_escalation"
+        ]
+        - baseline_human_error
+    )
+
+    ablation_comparison[
+        "security_detection_change"
+    ] = (
+        ablation_comparison[
+            "security_detection"
+        ]
+        - baseline_detection
+    )
+
+    print(
+        "\nGROUP FEATURE ABLATION COMPARISON"
+    )
+
+    print(
+        "================================="
+    )
+
+    print(
+        ablation_comparison[[
+            "removed_group",
+            "feature_count",
+            "accuracy",
+            "macro_f1",
+            "human_error_escalation",
+            "malicious_normal_miss",
+            "security_detection",
+            "accuracy_change",
+            "macro_f1_change",
+            "human_error_change",
+            "security_detection_change"
+        ]].to_string(
+            index=False
+        )
+    )
+
+    return ablation_comparison
 
 rf_full = build_pipeline(
     RandomForestClassifier(
@@ -653,5 +881,11 @@ print(
 print(
     comparison.to_string(
         index=False
+    )
+)
+
+group_ablation_comparison = (
+    run_group_ablation_experiment(
+        results[1]
     )
 )
