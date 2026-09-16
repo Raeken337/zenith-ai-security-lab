@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import (
@@ -577,6 +578,175 @@ def evaluate_model(
             ]
     }
 
+def evaluate_weighted_ensembles(
+    random_forest_pipeline,
+    logistic_regression_pipeline,
+    X_test,
+    y_test
+):
+    random_forest_classifier = (
+        random_forest_pipeline.named_steps[
+            "classifier"
+        ]
+    )
+
+    logistic_regression_classifier = (
+        logistic_regression_pipeline.named_steps[
+            "classifier"
+        ]
+    )
+
+    random_forest_classes = (
+        random_forest_classifier.classes_
+    )
+
+    logistic_regression_classes = (
+        logistic_regression_classifier.classes_
+    )
+
+    if not np.array_equal(
+        random_forest_classes,
+        logistic_regression_classes
+    ):
+        raise ValueError(
+            "Model class ordering does not match."
+        )
+
+    random_forest_probabilities = (
+        random_forest_pipeline.predict_proba(
+            X_test
+        )
+    )
+
+    logistic_regression_probabilities = (
+        logistic_regression_pipeline.predict_proba(
+            X_test
+        )
+    )
+
+    random_forest_weights = [
+        0.00,
+        0.60,
+        0.70,
+        0.75,
+        0.80,
+        0.90,
+        1.00
+    ]
+
+    ensemble_results = []
+
+    for random_forest_weight in (
+        random_forest_weights
+    ):
+        logistic_regression_weight = (
+            1.00 - random_forest_weight
+        )
+
+        combined_probabilities = (
+            random_forest_probabilities
+            * random_forest_weight
+            + logistic_regression_probabilities
+            * logistic_regression_weight
+        )
+
+        predicted_indices = np.argmax(
+            combined_probabilities,
+            axis=1
+        )
+
+        predictions = (
+            random_forest_classes[
+                predicted_indices
+            ]
+        )
+
+        accuracy = accuracy_score(
+            y_test,
+            predictions
+        )
+
+        macro_f1 = f1_score(
+            y_test,
+            predictions,
+            average="macro"
+        )
+
+        weighted_f1 = f1_score(
+            y_test,
+            predictions,
+            average="weighted"
+        )
+
+        zenith_metrics = (
+            calculate_zenith_metrics(
+                y_test,
+                predictions
+            )
+        )
+
+        ensemble_results.append({
+            "random_forest_weight":
+                random_forest_weight,
+
+            "logistic_regression_weight":
+                logistic_regression_weight,
+
+            "accuracy":
+                accuracy,
+
+            "macro_f1":
+                macro_f1,
+
+            "weighted_f1":
+                weighted_f1,
+
+            "human_error_escalation":
+                zenith_metrics[
+                    "human_error_escalation_rate"
+                ],
+
+            "malicious_normal_miss":
+                zenith_metrics[
+                    "malicious_normal_miss_rate"
+                ],
+
+            "malicious_suspicious":
+                zenith_metrics[
+                    "malicious_suspicious_rate"
+                ],
+
+            "suspicious_normal_miss":
+                zenith_metrics[
+                    "suspicious_normal_miss_rate"
+                ],
+
+            "security_detection":
+                zenith_metrics[
+                    "security_detection_rate"
+                ]
+        })
+
+    ensemble_comparison = pd.DataFrame(
+        ensemble_results
+    )
+
+    print(
+        "\nWEIGHTED MODEL COMPARISON"
+    )
+
+    print(
+        "========================="
+    )
+
+    print(
+        ensemble_comparison.to_string(
+            index=False
+        )
+    )
+
+    return ensemble_comparison
+
 def validate_feature_groups():
     grouped_features = [
         feature
@@ -883,6 +1053,16 @@ print(
         index=False
     )
 )
+
+weighted_model_comparison = (
+    evaluate_weighted_ensembles(
+        rf_selected,
+        lr_selected,
+        X_selected_test,
+        y_test
+    )
+)
+
 
 group_ablation_comparison = (
     run_group_ablation_experiment(

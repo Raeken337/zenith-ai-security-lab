@@ -1,0 +1,338 @@
+{
+    "model_version": "1.0.0",
+    "feature_schema_version": "1.0",
+    "created_at_utc": "2026-09-16T21:58:26.892321+00:00",
+    "training": {
+        "dataset_path": "data\\datasets\\zenith_behaviour_dataset.csv",
+        "dataset_sha256": "5f5408094c91ea42e2a8773c0e189d6a43d6648678dbd2b8f1ae4e6276f72104",
+        "row_count": 10000,
+        "target": "label",
+        "random_state": 42,
+        "evaluation_test_size": 0.2,
+        "final_training_scope": "all_dataset_rows"
+    },
+    "feature_schema": [
+        "department",
+        "role",
+        "event_type",
+        "hour",
+        "failed_logins_10m",
+        "denied_accesses_10m",
+        "unique_resources_30m",
+        "off_hours",
+        "role_mismatch",
+        "device_mismatch",
+        "recent_password_reset",
+        "successful_recovery",
+        "department_resource_mismatch",
+        "resource_sensitivity",
+        "recent_endpoints_used",
+        "time_since_last_event_seconds",
+        "repeated_resource_accesses",
+        "resource_traversal_count"
+    ],
+    "feature_groups": {
+        "authentication_recovery": [
+            "event_type",
+            "failed_logins_10m",
+            "recent_password_reset",
+            "successful_recovery"
+        ],
+        "identity_role": [
+            "department",
+            "role",
+            "role_mismatch"
+        ],
+        "resource_context": [
+            "denied_accesses_10m",
+            "unique_resources_30m",
+            "department_resource_mismatch",
+            "resource_sensitivity"
+        ],
+        "endpoint_context": [
+            "device_mismatch",
+            "recent_endpoints_used"
+        ],
+        "temporal_context": [
+            "hour",
+            "off_hours",
+            "time_since_last_event_seconds"
+        ],
+        "traversal_context": [
+            "repeated_resource_accesses",
+            "resource_traversal_count"
+        ]
+    },
+    "classes": [
+        "human_error",
+        "malicious",
+        "normal",
+        "suspicious"
+    ],
+    "models": {
+        "random_forest": {
+            "role": "primary",
+            "weight": 0.9,
+            "file": "zenith_rf_v1.joblib",
+            "parameters": {
+                "n_estimators": 100,
+                "random_state": 42
+            }
+        },
+        "logistic_regression": {
+            "role": "supporting",
+            "weight": 0.1,
+            "file": "zenith_lr_v1.joblib",
+            "parameters": {
+                "max_iter": 1000,
+                "random_state": 42
+            }
+        }
+    },
+    "evaluation": {
+        "random_forest": {
+            "accuracy": 0.9485,
+            "macro_f1": 0.9371121185223177,
+            "weighted_f1": 0.9483155536560803,
+            "zenith_metrics": {
+                "human_error_escalation_rate": 0.0075,
+                "malicious_normal_miss_rate": 0.0,
+                "malicious_suspicious_rate": 0.1875,
+                "suspicious_normal_miss_rate": 0.0025,
+                "security_detection_rate": 0.985
+            },
+            "confusion_matrix": [
+                [
+                    392,
+                    0,
+                    5,
+                    3
+                ],
+                [
+                    1,
+                    324,
+                    0,
+                    75
+                ],
+                [
+                    4,
+                    0,
+                    795,
+                    1
+                ],
+                [
+                    10,
+                    3,
+                    1,
+                    386
+                ]
+            ],
+            "classification_report": {
+                "human_error": {
+                    "precision": 0.9631449631449631,
+                    "recall": 0.98,
+                    "f1-score": 0.9714993804213135,
+                    "support": 400.0
+                },
+                "malicious": {
+                    "precision": 0.9908256880733946,
+                    "recall": 0.81,
+                    "f1-score": 0.8913342503438789,
+                    "support": 400.0
+                },
+                "normal": {
+                    "precision": 0.9925093632958801,
+                    "recall": 0.99375,
+                    "f1-score": 0.9931292941911305,
+                    "support": 800.0
+                },
+                "suspicious": {
+                    "precision": 0.8301075268817204,
+                    "recall": 0.965,
+                    "f1-score": 0.892485549132948,
+                    "support": 400.0
+                },
+                "accuracy": 0.9485,
+                "macro avg": {
+                    "precision": 0.9441468853489896,
+                    "recall": 0.9371875,
+                    "f1-score": 0.9371121185223177,
+                    "support": 2000.0
+                },
+                "weighted avg": {
+                    "precision": 0.9538193809383677,
+                    "recall": 0.9485,
+                    "f1-score": 0.9483155536560803,
+                    "support": 2000.0
+                }
+            }
+        },
+        "logistic_regression": {
+            "accuracy": 0.881,
+            "macro_f1": 0.8531602668871942,
+            "weighted_f1": 0.880780398278794,
+            "zenith_metrics": {
+                "human_error_escalation_rate": 0.035,
+                "malicious_normal_miss_rate": 0.0,
+                "malicious_suspicious_rate": 0.2375,
+                "suspicious_normal_miss_rate": 0.0,
+                "security_detection_rate": 0.97625
+            },
+            "confusion_matrix": [
+                [
+                    378,
+                    0,
+                    8,
+                    14
+                ],
+                [
+                    4,
+                    301,
+                    0,
+                    95
+                ],
+                [
+                    5,
+                    0,
+                    794,
+                    1
+                ],
+                [
+                    15,
+                    96,
+                    0,
+                    289
+                ]
+            ],
+            "classification_report": {
+                "human_error": {
+                    "precision": 0.9402985074626866,
+                    "recall": 0.945,
+                    "f1-score": 0.942643391521197,
+                    "support": 400.0
+                },
+                "malicious": {
+                    "precision": 0.7581863979848866,
+                    "recall": 0.7525,
+                    "f1-score": 0.7553324968632371,
+                    "support": 400.0
+                },
+                "normal": {
+                    "precision": 0.9900249376558603,
+                    "recall": 0.9925,
+                    "f1-score": 0.9912609238451935,
+                    "support": 800.0
+                },
+                "suspicious": {
+                    "precision": 0.7243107769423559,
+                    "recall": 0.7225,
+                    "f1-score": 0.723404255319149,
+                    "support": 400.0
+                },
+                "accuracy": 0.881,
+                "macro avg": {
+                    "precision": 0.8532051550114473,
+                    "recall": 0.853125,
+                    "f1-score": 0.8531602668871942,
+                    "support": 2000.0
+                },
+                "weighted avg": {
+                    "precision": 0.8805691115403299,
+                    "recall": 0.881,
+                    "f1-score": 0.880780398278794,
+                    "support": 2000.0
+                }
+            }
+        },
+        "weighted_ensemble": {
+            "accuracy": 0.9465,
+            "macro_f1": 0.9345747864576499,
+            "weighted_f1": 0.946285688004346,
+            "zenith_metrics": {
+                "human_error_escalation_rate": 0.005,
+                "malicious_normal_miss_rate": 0.0,
+                "malicious_suspicious_rate": 0.185,
+                "suspicious_normal_miss_rate": 0.0,
+                "security_detection_rate": 0.98625
+            },
+            "confusion_matrix": [
+                [
+                    392,
+                    0,
+                    6,
+                    2
+                ],
+                [
+                    1,
+                    325,
+                    0,
+                    74
+                ],
+                [
+                    4,
+                    0,
+                    795,
+                    1
+                ],
+                [
+                    10,
+                    9,
+                    0,
+                    381
+                ]
+            ],
+            "classification_report": {
+                "human_error": {
+                    "precision": 0.9631449631449631,
+                    "recall": 0.98,
+                    "f1-score": 0.9714993804213135,
+                    "support": 400.0
+                },
+                "malicious": {
+                    "precision": 0.9730538922155688,
+                    "recall": 0.8125,
+                    "f1-score": 0.885558583106267,
+                    "support": 400.0
+                },
+                "normal": {
+                    "precision": 0.9925093632958801,
+                    "recall": 0.99375,
+                    "f1-score": 0.9931292941911305,
+                    "support": 800.0
+                },
+                "suspicious": {
+                    "precision": 0.8318777292576419,
+                    "recall": 0.9525,
+                    "f1-score": 0.8881118881118881,
+                    "support": 400.0
+                },
+                "accuracy": 0.9465,
+                "macro avg": {
+                    "precision": 0.9401464869785134,
+                    "recall": 0.9346875,
+                    "f1-score": 0.9345747864576499,
+                    "support": 2000.0
+                },
+                "weighted avg": {
+                    "precision": 0.9506190622419868,
+                    "recall": 0.9465,
+                    "f1-score": 0.946285688004346,
+                    "support": 2000.0
+                }
+            }
+        }
+    },
+    "runtime_versions": {
+        "python": "3.14.2",
+        "pandas": "3.0.2",
+        "scikit_learn": "1.8.0",
+        "joblib": "1.5.3",
+        "numpy": "2.4.4"
+    },
+    "limitations": [
+        "Models are trained using synthetic behavioural data.",
+        "Model probabilities are not validated production risk scores.",
+        "The 90/10 model weighting was selected using the current experimental test split.",
+        "Final exported pipelines are retrained using all dataset rows."
+    ]
+}
