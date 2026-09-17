@@ -108,7 +108,84 @@ class TelemetryViewerTests(
                             0.8625
                     }
                 }
+            },
+
+            "zenith_decision": {
+                "classification":
+                    "suspicious",
+
+                "confidence":
+                    0.7343,
+
+                "event_importance": {
+                    "level": 4,
+                    "name": "critical"
+                },
+
+                "incident_severity": {
+                    "level": 5,
+                    "name": "critical"
+                },
+
+                "response_level":
+                    4,
+
+                "response_name":
+                    "containment",
+
+                "reasoning": [
+                    (
+                        "Three denied resource requests "
+                        "show persistent probing."
+                    ),
+
+                    (
+                        "Activity has traversed "
+                        "3 resources."
+                    ),
+
+                    (
+                        "The current resource has high "
+                        "sensitivity (4/5)."
+                    )
+                ],
+
+                "safeguards": [
+                    (
+                        "Suspicious activity may "
+                        "recommend containment, but not "
+                        "the highest critical response."
+                    )
+                ],
+
+                "recommended_protocols": [
+                    "record_event",
+                    "increase_monitoring",
+                    "open_incident",
+                    "alert_administrator",
+                    "require_step_up_authentication",
+                    "invalidate_active_sessions",
+                    "lock_account",
+                    "isolate_endpoint"
+                ],
+
+                "privilege_context": {
+                    "level": 0,
+                    "name": "standard",
+                    "role": "Financial Analyst"
+                },
+
+                "incident_state": {
+                    "event_count": 6,
+                    "security_assessment_count": 2,
+                    "consecutive_security_assessments": 2,
+                    "highest_severity_level": 5,
+                    "highest_response_level": 4,
+                    "last_classification": "suspicious",
+                    "existing_actions": []
+                }
             }
+            
         }
 
         output = io.StringIO()
@@ -149,6 +226,35 @@ class TelemetryViewerTests(
         self.assertIn(
             "current resource sensitivity "
             "is 4/5",
+            rendered_output
+        )
+        self.assertIn(
+            "Zenith Decision",
+            rendered_output
+        )
+
+        self.assertIn(
+            "Response: Level 4 - Containment",
+            rendered_output
+        )
+
+        self.assertIn(
+            "Why Zenith selected this response:",
+            rendered_output
+        )
+
+        self.assertIn(
+            "Lock Account",
+            rendered_output
+        )
+
+        self.assertIn(
+            "Isolate Endpoint",
+            rendered_output
+        )
+
+        self.assertIn(
+            "Highest response level: 4",
             rendered_output
         )
 

@@ -19,6 +19,10 @@ from models.runtime.inference_engine import (
     ZenithInferenceEngine
 )
 
+from models.runtime.decision_engine import (
+    ZenithDecisionEngine
+)
+
 
 class ZenithCoreAnalysisTests(
     unittest.TestCase
@@ -32,6 +36,10 @@ class ZenithCoreAnalysisTests(
     def setUp(self):
         self.feature_engine = (
             FeatureEngine()
+        )
+
+        self.decision_engine = (
+            ZenithDecisionEngine()
         )
 
     def build_event(self):
@@ -209,7 +217,8 @@ class ZenithCoreAnalysisTests(
                 ) = process_event(
                     invalid_event,
                     self.feature_engine,
-                    self.inference_engine
+                    self.inference_engine,
+                    self.decision_engine
                 )
 
             self.assertTrue(
@@ -229,6 +238,63 @@ class ZenithCoreAnalysisTests(
                 temporary_log.exists()
             )
 
+    def test_central_event_contains_decision(
+        self
+    ):
+        event = self.build_event()
+
+        with tempfile.TemporaryDirectory() as (
+            temporary_directory
+        ):
+            temporary_log = (
+                Path(temporary_directory)
+                / "central_telemetry.jsonl"
+            )
+
+            with patch(
+                "hq.zenith_core."
+                "CENTRAL_LOG_FILE",
+                temporary_log
+            ):
+                (
+                    central_event,
+                    response
+                ) = process_event(
+                    event,
+                    self.feature_engine,
+                    self.inference_engine,
+                    self.decision_engine
+                )
+
+        self.assertTrue(
+            response["decision_created"]
+        )
+
+        self.assertIn(
+            "zenith_decision",
+            central_event
+        )
+
+        decision = central_event[
+            "zenith_decision"
+        ]
+
+        self.assertEqual(
+            decision["classification"],
+            "normal"
+        )
+
+        self.assertEqual(
+            decision["response_level"],
+            0
+        )
+
+        self.assertEqual(
+            decision[
+                "recommended_protocols"
+            ],
+            ["record_event"]
+        )
 
 if __name__ == "__main__":
     unittest.main()

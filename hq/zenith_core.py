@@ -12,6 +12,9 @@ from models.runtime.inference_engine import (
     ZenithInferenceEngine
 )
 
+from models.runtime.decision_engine import (
+    ZenithDecisionEngine
+)
 
 HOST = "127.0.0.1"
 
@@ -57,6 +60,7 @@ def store_event(
     event,
     features=None,
     assessment=None,
+    decision=None,
     analysis_error=None
 ):
     ensure_log_directory()
@@ -77,11 +81,17 @@ def store_event(
         central_event[
             "zenith_assessment"
         ] = assessment
+        
+    if decision is not None:
+        central_event[
+            "zenith_decision"
+        ] = decision        
 
     if analysis_error is not None:
         central_event[
             "zenith_analysis_error"
         ] = analysis_error
+        
 
     with CENTRAL_LOG_FILE.open(
         "a",
@@ -114,6 +124,30 @@ def store_event(
             "Model agreement: "
             f"{assessment['agreement']}"
         )
+    if decision is not None:
+        print(
+            "Incident severity: "
+            f"{decision['incident_severity']['name']}"
+        )
+
+        print(
+            "Response level: "
+            f"{decision['response_level']} - "
+            f"{decision['response_name']}"
+        )
+
+        protocols = decision[
+            "recommended_protocols"
+        ]
+
+        print(
+            "Recommended protocols: "
+            + (
+                ", ".join(protocols)
+                if protocols
+                else "none"
+            )
+        )
 
     return central_event
 
@@ -121,7 +155,8 @@ def store_event(
 def process_event(
     event,
     feature_engine,
-    inference_engine
+    inference_engine,
+    decision_engine
 ):
     try:
         (
@@ -133,30 +168,64 @@ def process_event(
             inference_engine
         )
 
+        decision = (
+            decision_engine.decide(
+                event=event,
+                features=features,
+                assessment=assessment
+            )
+        )
+
         central_event = store_event(
             event,
             features=features,
-            assessment=assessment
+            assessment=assessment,
+            decision=decision
         )
 
         response = {
             "received": True,
             "analysed": True,
+            "decision_created": True,
+
             "reason": (
-                "Telemetry accepted and "
-                "analysed by Zenith Core"
+                "Telemetry accepted, analysed "
+                "and evaluated by Zenith Core"
             ),
+
             "classification":
                 assessment[
                     "classification"
                 ],
+
             "confidence":
                 assessment[
                     "confidence"
                 ],
+
             "agreement":
                 assessment[
                     "agreement"
+                ],
+
+            "incident_severity":
+                decision[
+                    "incident_severity"
+                ],
+
+            "response_level":
+                decision[
+                    "response_level"
+                ],
+
+            "response_name":
+                decision[
+                    "response_name"
+                ],
+
+            "recommended_protocols":
+                decision[
+                    "recommended_protocols"
                 ]
         }
 
@@ -184,10 +253,13 @@ def process_event(
         response = {
             "received": True,
             "analysed": False,
+            "decision_created": False,
+
             "reason": (
                 "Telemetry stored, but Zenith "
                 "analysis failed"
             ),
+
             "analysis_error":
                 error_message
         }
@@ -203,6 +275,10 @@ def start_zenith_core():
 
     inference_engine = (
         ZenithInferenceEngine()
+    )
+
+    decision_engine = (
+        ZenithDecisionEngine()
     )
 
     server_socket = socket.socket(
@@ -229,7 +305,9 @@ def start_zenith_core():
         "Random Forest and Logistic "
         "Regression models loaded."
     )
-
+    print(
+        "Zenith decision engine ready."
+    )
     while True:
         (
             client_socket,
@@ -264,13 +342,15 @@ def start_zenith_core():
                 f"{event.get('source_device', 'unknown')}"
             )
 
+            
             (
                 central_event,
                 response
             ) = process_event(
                 event,
                 feature_engine,
-                inference_engine
+                inference_engine,
+                decision_engine
             )
 
             client_socket.sendall(

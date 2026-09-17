@@ -370,6 +370,189 @@ def display_assessment(assessment):
                 f"{format_percentage(probability)}"
             )
 
+def display_decision(decision):
+    print(
+        "\nZenith Decision"
+    )
+
+    print(
+        "---------------"
+    )
+
+    importance = decision.get(
+        "event_importance",
+        {}
+    )
+
+    severity = decision.get(
+        "incident_severity",
+        {}
+    )
+
+    response_level = decision.get(
+        "response_level",
+        0
+    )
+
+    print(
+        "Classification: "
+        f"{format_label(decision.get('classification'))} "
+        f"({format_percentage(decision.get('confidence'))})"
+    )
+
+    print(
+        "Event importance: "
+        f"{format_label(importance.get('name'))} "
+        f"(level {importance.get('level', 0)})"
+    )
+
+    print(
+        "Incident severity: "
+        f"{format_label(severity.get('name'))} "
+        f"(level {severity.get('level', 0)})"
+    )
+
+    print(
+        "Response: "
+        f"Level {response_level} - "
+        f"{format_label(decision.get('response_name'))}"
+    )
+
+    print(
+        "\nWhy Zenith selected this response:"
+    )
+
+    reasoning = decision.get(
+        "reasoning",
+        []
+    )
+
+    if reasoning:
+        for explanation in reasoning:
+            print(
+                f"- {explanation}"
+            )
+
+    else:
+        print(
+            "- No decision reasoning was recorded."
+        )
+
+    safeguards = decision.get(
+        "safeguards",
+        []
+    )
+
+    print(
+        "\nSafety controls applied:"
+    )
+
+    if safeguards:
+        for safeguard in safeguards:
+            print(
+                f"- {safeguard}"
+            )
+
+    else:
+        print(
+            "- No response cap was required."
+        )
+
+    protocols = decision.get(
+        "recommended_protocols",
+        []
+    )
+
+    print(
+        "\nRecommended protocols:"
+    )
+
+    if protocols:
+        for protocol in protocols:
+            print(
+                f"- {format_label(protocol)}"
+            )
+
+    else:
+        print(
+            "- No new protocol is recommended."
+        )
+
+    privilege = decision.get(
+        "privilege_context",
+        {}
+    )
+
+    print(
+        "\nIdentity impact context:"
+    )
+
+    print(
+        "- Role: "
+        f"{privilege.get('role', 'Unknown')}"
+    )
+
+    print(
+        "- Privilege: "
+        f"{format_label(privilege.get('name'))}"
+    )
+
+    incident_state = decision.get(
+        "incident_state",
+        {}
+    )
+
+    print(
+        "\nCurrent incident state:"
+    )
+
+    print(
+        "- Events evaluated: "
+        f"{incident_state.get('event_count', 0)}"
+    )
+
+    print(
+        "- Security-relevant assessments: "
+        f"{incident_state.get(
+            'security_assessment_count',
+            0
+        )}"
+    )
+
+    print(
+        "- Consecutive security assessments: "
+        f"{incident_state.get(
+            'consecutive_security_assessments',
+            0
+        )}"
+    )
+
+    print(
+        "- Highest response level: "
+        f"{incident_state.get(
+            'highest_response_level',
+            0
+        )}"
+    )
+
+    existing_actions = incident_state.get(
+        "existing_actions",
+        []
+    )
+
+    if existing_actions:
+        print(
+            "- Existing defensive actions: "
+            + ", ".join(
+                format_label(action)
+                for action in existing_actions
+            )
+        )
+
+    else:
+        print(
+            "- Existing defensive actions: None"
+        )
 
 def display_event(
     event,
@@ -531,6 +714,29 @@ def display_event(
 
     display_assessment(
         assessment
+    )
+
+    decision = event.get(
+        "zenith_decision"
+    )
+
+    if decision is None:
+        print(
+            "\nZenith Decision"
+        )
+
+        print(
+            "---------------"
+        )
+
+        print(
+            "No decision is stored for this event."
+        )
+
+        return
+
+    display_decision(
+        decision
     )
 
 
