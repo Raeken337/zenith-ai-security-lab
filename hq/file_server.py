@@ -291,37 +291,45 @@ def handle_file_request(request):
         )
 
     if not session_token:
+        reason = "Session token missing"
+
+        log_file_access_event(
+            username="unknown",
+            source_device=source_device,
+            resource=resource,
+            access_granted=False,
+            reason=reason,
+            department="unknown",
+            role="unknown"
+        )
+
         return {
             "access_granted": False,
-            "reason": "Session token missing"
+            "reason": reason
         }
 
-    if not resource:
-        return {
-            "access_granted": False,
-            "reason": "Resource not specified"
-        }
-
-    session = validate_session_with_identity_server(
-        session_token
+    session = (
+        validate_session_with_identity_server(
+            session_token
+        )
     )
 
     if not session["valid"]:
-        return {
-            "access_granted": False,
-            "reason": session["reason"]
-        }
-    session_device = session.get(
-    "source_device"
-)
+        reason = session["reason"]
 
-    if session_device != source_device:
+        log_file_access_event(
+            username="unknown",
+            source_device=source_device,
+            resource=resource,
+            access_granted=False,
+            reason=reason,
+            department="unknown",
+            role="unknown"
+        )
+
         return {
             "access_granted": False,
-            "reason": (
-                "Session is not valid "
-                "for this device"
-            )
+            "reason": reason
         }
 
     username = session["username"]
@@ -329,10 +337,55 @@ def handle_file_request(request):
     department = session["department"]
     role = session["role"]
 
-    access_granted, reason = check_resource_access(
-        department,
-        role,
-        resource
+    if not resource:
+        reason = "Resource not specified"
+
+        log_file_access_event(
+            username=username,
+            source_device=source_device,
+            resource=None,
+            access_granted=False,
+            reason=reason,
+            department=department,
+            role=role
+        )
+
+        return {
+            "access_granted": False,
+            "reason": reason
+        }
+
+    session_device = session.get(
+        "source_device"
+    )
+
+    if session_device != source_device:
+        reason = (
+            "Session is not valid "
+            "for this device"
+        )
+
+        log_file_access_event(
+            username=username,
+            source_device=source_device,
+            resource=resource,
+            access_granted=False,
+            reason=reason,
+            department=department,
+            role=role
+        )
+
+        return {
+            "access_granted": False,
+            "reason": reason
+        }
+
+    access_granted, reason = (
+        check_resource_access(
+            department,
+            role,
+            resource
+        )
     )
 
     log_file_access_event(

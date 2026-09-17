@@ -18,3 +18,6 @@ htmlcov/
 # Operating-system files
 .DS_Store
 Thumbs.db
+
+# Runtime telemetry
+data/logs/*.jsonl

@@ -385,14 +385,18 @@ class FeatureEngine:
 
         if user is None:
             return {
-                "department": event.get(
-                    "department",
-                    "unknown"
+                "department": (
+                    event.get(
+                        "department"
+                    )
+                    or "unknown"
                 ),
 
-                "role": event.get(
-                    "role",
-                    "unknown"
+                "role": (
+                    event.get(
+                        "role"
+                    )
+                    or "unknown"
                 ),
 
                 "work_start": 8,
