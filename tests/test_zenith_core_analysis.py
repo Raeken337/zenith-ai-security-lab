@@ -3,7 +3,10 @@ import tempfile
 import unittest
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import (
+    Mock,
+    patch
+)
 
 from hq.zenith_core import (
     analyse_event,
@@ -21,6 +24,13 @@ from models.runtime.inference_engine import (
 
 from models.runtime.decision_engine import (
     ZenithDecisionEngine
+)
+from simulation.defensive_state import (
+    DefensiveStateStore
+)
+
+from simulation.protocol_executor import (
+    ZenithProtocolExecutor
 )
 
 
@@ -41,6 +51,31 @@ class ZenithCoreAnalysisTests(
         self.decision_engine = (
             ZenithDecisionEngine()
         )
+        self.state_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        state_file = (
+            Path(
+                self.state_directory.name
+            )
+            / "defensive_state.json"
+        )
+
+        self.state_store = (
+            DefensiveStateStore(
+                state_file=state_file
+            )
+        )
+
+        self.protocol_executor = (
+            ZenithProtocolExecutor(
+                state_store=self.state_store
+            )
+        )
+
+    def tearDown(self):
+        self.state_directory.cleanup()
 
     def build_event(self):
         return {
@@ -218,7 +253,8 @@ class ZenithCoreAnalysisTests(
                     invalid_event,
                     self.feature_engine,
                     self.inference_engine,
-                    self.decision_engine
+                    self.decision_engine,
+                    self.protocol_executor
                 )
 
             self.assertTrue(
@@ -263,7 +299,8 @@ class ZenithCoreAnalysisTests(
                     event,
                     self.feature_engine,
                     self.inference_engine,
-                    self.decision_engine
+                    self.decision_engine,
+                    self.protocol_executor
                 )
 
         self.assertTrue(
@@ -273,6 +310,25 @@ class ZenithCoreAnalysisTests(
         self.assertIn(
             "zenith_decision",
             central_event
+        )
+        self.assertIn(
+            "zenith_execution",
+            central_event
+        )
+
+        self.assertTrue(
+            response[
+                "protocols_executed"
+            ]
+        )
+
+        self.assertEqual(
+            central_event[
+                "zenith_execution"
+            ][
+                "satisfied_protocols"
+            ],
+            ["record_event"]
         )
 
         decision = central_event[
@@ -294,6 +350,126 @@ class ZenithCoreAnalysisTests(
                 "recommended_protocols"
             ],
             ["record_event"]
+        )
+
+    def test_recommended_protocols_create_shared_state(
+        self
+    ):
+        event = self.build_event()
+
+        simulated_decision_engine = (
+            Mock()
+        )
+
+        simulated_decision_engine.decide.return_value = {
+            "classification":
+                "suspicious",
+
+            "confidence":
+                0.70,
+
+            "event_importance": {
+                "level": 3,
+                "name": "high"
+            },
+
+            "incident_severity": {
+                "level": 4,
+                "name": "high"
+            },
+
+            "response_level":
+                2,
+
+            "response_name":
+                "alert_and_review",
+
+            "reasoning": [
+                "Repeated probing requires review."
+            ],
+
+            "safeguards":
+                [],
+
+            "recommended_protocols": [
+                "record_event",
+                "increase_monitoring",
+                "open_incident",
+                "alert_administrator"
+            ],
+
+            "privilege_context": {
+                "level": 0,
+                "name": "standard",
+                "role": "Financial Analyst"
+            },
+
+            "incident_state": {
+                "event_count": 1,
+                "security_assessment_count": 1,
+                "consecutive_security_assessments": 1,
+                "highest_severity_level": 4,
+                "highest_response_level": 2,
+                "last_classification": "suspicious",
+                "existing_actions": []
+            }
+        }
+
+        with tempfile.TemporaryDirectory() as (
+            temporary_directory
+        ):
+            temporary_log = (
+                Path(temporary_directory)
+                / "central_telemetry.jsonl"
+            )
+
+            with patch(
+                "hq.zenith_core."
+                "CENTRAL_LOG_FILE",
+                temporary_log
+            ):
+                (
+                    central_event,
+                    response
+                ) = process_event(
+                    event,
+                    self.feature_engine,
+                    self.inference_engine,
+                    simulated_decision_engine,
+                    self.protocol_executor
+                )
+
+        self.assertTrue(
+            response[
+                "protocols_executed"
+            ]
+        )
+
+        self.assertIn(
+            "zenith_execution",
+            central_event
+        )
+
+        active_protocols = (
+            self.state_store
+            .active_protocols_for_event(
+                event
+            )
+        )
+
+        self.assertIn(
+            "increase_monitoring",
+            active_protocols
+        )
+
+        self.assertIn(
+            "open_incident",
+            active_protocols
+        )
+
+        self.assertIn(
+            "alert_administrator",
+            active_protocols
         )
 
 if __name__ == "__main__":

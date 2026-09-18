@@ -9,12 +9,19 @@ from office.sales_team import can_sales_role_access
 from office.it_team import can_it_role_access
 from office.office_admin_team import can_office_admin_role_access
 
+from simulation.defensive_state import (
+    DefensiveStateStore
+)
 
 HOST = "127.0.0.1"
 PORT = 5002
 
 IDENTITY_SERVER_HOST = "127.0.0.1"
 IDENTITY_SERVER_PORT = 5001
+
+DEFENSIVE_STATE = (
+    DefensiveStateStore()
+)
 
 
 RESOURCES = {
@@ -317,14 +324,29 @@ def handle_file_request(request):
     if not session["valid"]:
         reason = session["reason"]
 
+        username = session.get(
+            "username",
+            "unknown"
+        )
+
+        department = session.get(
+            "department",
+            "unknown"
+        )
+
+        role = session.get(
+            "role",
+            "unknown"
+        )
+
         log_file_access_event(
-            username="unknown",
+            username=username,
             source_device=source_device,
             resource=resource,
             access_granted=False,
             reason=reason,
-            department="unknown",
-            role="unknown"
+            department=department,
+            role=role
         )
 
         return {
@@ -379,6 +401,82 @@ def handle_file_request(request):
             "access_granted": False,
             "reason": reason
         }
+
+    if (
+        DEFENSIVE_STATE
+        .is_endpoint_isolated(
+            source_device
+        )
+    ):
+        reason = (
+            "Endpoint isolated by Zenith"
+        )
+
+        log_file_access_event(
+            username=username,
+            source_device=source_device,
+            resource=resource,
+            access_granted=False,
+            reason=reason,
+            department=department,
+            role=role
+        )
+
+        return {
+            "access_granted": False,
+            "reason": reason
+        }
+
+    if (
+        DEFENSIVE_STATE
+        .is_lateral_movement_restricted(
+            source_device
+        )
+    ):
+        reason = (
+            "Lateral movement restricted "
+            "by Zenith"
+        )
+
+        log_file_access_event(
+            username=username,
+            source_device=source_device,
+            resource=resource,
+            access_granted=False,
+            reason=reason,
+            department=department,
+            role=role
+        )
+
+        return {
+            "access_granted": False,
+            "reason": reason
+        }
+
+    if (
+        DEFENSIVE_STATE
+        .is_resource_protected(
+            resource
+        )
+    ):
+        reason = (
+            "Resource protected by Zenith"
+        )
+
+        log_file_access_event(
+            username=username,
+            source_device=source_device,
+            resource=resource,
+            access_granted=False,
+            reason=reason,
+            department=department,
+            role=role
+        )
+
+        return {
+            "access_granted": False,
+            "reason": reason
+        }    
 
     access_granted, reason = (
         check_resource_access(

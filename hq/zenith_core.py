@@ -16,6 +16,14 @@ from models.runtime.decision_engine import (
     ZenithDecisionEngine
 )
 
+from simulation.defensive_state import (
+    DefensiveStateStore
+)
+
+from simulation.protocol_executor import (
+    ZenithProtocolExecutor
+)
+
 HOST = "127.0.0.1"
 
 PORT = 5003
@@ -61,6 +69,8 @@ def store_event(
     features=None,
     assessment=None,
     decision=None,
+    execution=None,
+    protocol_execution_error=None,
     analysis_error=None
 ):
     ensure_log_directory()
@@ -81,11 +91,21 @@ def store_event(
         central_event[
             "zenith_assessment"
         ] = assessment
-        
+
     if decision is not None:
         central_event[
             "zenith_decision"
-        ] = decision        
+        ] = decision
+
+    if execution is not None:
+        central_event[
+            "zenith_execution"
+        ] = execution
+
+    if protocol_execution_error is not None:
+        central_event[
+            "zenith_protocol_execution_error"
+        ] = protocol_execution_error
 
     if analysis_error is not None:
         central_event[
@@ -149,6 +169,32 @@ def store_event(
             )
         )
 
+    if execution is not None:
+        applied_protocols = [
+            action["protocol"]
+            for action
+            in execution[
+                "applied_actions"
+            ]
+        ]
+
+        print(
+            "Protocols applied: "
+            + (
+                ", ".join(
+                    applied_protocols
+                )
+                if applied_protocols
+                else "no new state changes"
+            )
+        )
+
+    if protocol_execution_error is not None:
+        print(
+            "Protocol execution failed: "
+            f"{protocol_execution_error}"
+        )
+
     return central_event
 
 
@@ -156,7 +202,8 @@ def process_event(
     event,
     feature_engine,
     inference_engine,
-    decision_engine
+    decision_engine,
+    protocol_executor
 ):
     try:
         (
@@ -168,25 +215,60 @@ def process_event(
             inference_engine
         )
 
+        existing_actions = (
+            protocol_executor
+            .state_store
+            .active_protocols_for_event(
+                event
+            )
+        )
+
         decision = (
             decision_engine.decide(
                 event=event,
                 features=features,
-                assessment=assessment
+                assessment=assessment,
+                existing_actions=existing_actions
             )
         )
+
+        execution = None
+        protocol_execution_error = None
+
+        try:
+            execution = (
+                protocol_executor.execute(
+                    event=event,
+                    decision=decision
+                )
+            )
+
+        except Exception as error:
+            protocol_execution_error = (
+                f"{type(error).__name__}: "
+                f"{error}"
+            )
 
         central_event = store_event(
             event,
             features=features,
             assessment=assessment,
-            decision=decision
+            decision=decision,
+            execution=execution,
+            protocol_execution_error=(
+                protocol_execution_error
+            )
         )
 
         response = {
             "received": True,
             "analysed": True,
             "decision_created": True,
+
+            "protocols_executed": (
+                protocol_execution_error
+                is None
+            ),
 
             "reason": (
                 "Telemetry accepted, analysed "
@@ -226,8 +308,16 @@ def process_event(
             "recommended_protocols":
                 decision[
                     "recommended_protocols"
-                ]
+                ],
+
+            "protocol_execution":
+                execution
         }
+
+        if protocol_execution_error is not None:
+            response[
+                "protocol_execution_error"
+            ] = protocol_execution_error
 
         return (
             central_event,
@@ -281,6 +371,16 @@ def start_zenith_core():
         ZenithDecisionEngine()
     )
 
+    defensive_state = (
+        DefensiveStateStore()
+    )
+
+    protocol_executor = (
+        ZenithProtocolExecutor(
+            state_store=defensive_state
+        )
+    )
+
     server_socket = socket.socket(
         socket.AF_INET,
         socket.SOCK_STREAM
@@ -308,6 +408,11 @@ def start_zenith_core():
     print(
         "Zenith decision engine ready."
     )
+
+    print(
+        "Simulated protocol executor ready."
+    )
+
     while True:
         (
             client_socket,
@@ -350,7 +455,8 @@ def start_zenith_core():
                 event,
                 feature_engine,
                 inference_engine,
-                decision_engine
+                decision_engine,
+                protocol_executor
             )
 
             client_socket.sendall(

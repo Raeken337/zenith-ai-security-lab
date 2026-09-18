@@ -739,6 +739,198 @@ def display_event(
         decision
     )
 
+    execution = event.get(
+        "zenith_execution"
+    )
+
+    execution_error = event.get(
+        "zenith_protocol_execution_error"
+    )
+
+    if (
+        execution is not None
+        or execution_error is not None
+    ):
+        display_protocol_execution(
+            execution,
+            execution_error
+        )
+
+
+def display_protocol_execution(
+    execution,
+    execution_error=None
+):
+    print(
+        "\nZenith Protocol Execution"
+    )
+
+    print(
+        "-------------------------"
+    )
+
+    if execution_error is not None:
+        print(
+            "Execution status: Failed"
+        )
+
+        print(
+            f"Error: {execution_error}"
+        )
+
+        if execution is None:
+            return
+
+    if execution is None:
+        print(
+            "No protocol execution result "
+            "is stored for this event."
+        )
+
+        return
+
+    print(
+        "Execution status: Completed"
+    )
+
+    print(
+        "Execution time: "
+        f"{execution.get(
+            'executed_at',
+            'Unknown'
+        )}"
+    )
+
+    applied_actions = execution.get(
+        "applied_actions",
+        []
+    )
+
+    print(
+        "\nApplied state changes:"
+    )
+
+    if applied_actions:
+        for action in applied_actions:
+            print(
+                "- "
+                f"{format_label(
+                    action.get('protocol')
+                )} -> "
+                f"{format_label(
+                    action.get('target_type')
+                )}: "
+                f"{action.get('target', 'Unknown')}"
+            )
+
+            print(
+                "  Action ID: "
+                f"{action.get(
+                    'action_id',
+                    'Unknown'
+                )}"
+            )
+
+    else:
+        print(
+            "- No new defensive state "
+            "was required."
+        )
+
+    already_active = execution.get(
+        "already_active",
+        []
+    )
+
+    print(
+        "\nAlready-active controls:"
+    )
+
+    if already_active:
+        for action in already_active:
+            print(
+                "- "
+                f"{format_label(
+                    action.get('protocol')
+                )} -> "
+                f"{format_label(
+                    action.get('target_type')
+                )}: "
+                f"{action.get('target', 'Unknown')}"
+            )
+
+    else:
+        print(
+            "- None"
+        )
+
+    satisfied_protocols = execution.get(
+        "satisfied_protocols",
+        []
+    )
+
+    print(
+        "\nCompleted without new state:"
+    )
+
+    if satisfied_protocols:
+        for protocol in satisfied_protocols:
+            print(
+                f"- {format_label(protocol)}"
+            )
+
+    else:
+        print(
+            "- None"
+        )
+
+    skipped_protocols = execution.get(
+        "skipped_protocols",
+        []
+    )
+
+    print(
+        "\nSkipped protocols:"
+    )
+
+    if skipped_protocols:
+        for skipped in skipped_protocols:
+            print(
+                "- "
+                f"{format_label(
+                    skipped.get('protocol')
+                )}: "
+                f"{skipped.get(
+                    'reason',
+                    'No reason recorded'
+                )}"
+            )
+
+    else:
+        print(
+            "- None"
+        )
+
+    active_protocols = execution.get(
+        "active_protocols",
+        []
+    )
+
+    print(
+        "\nActive controls after this event:"
+    )
+
+    if active_protocols:
+        for protocol in active_protocols:
+            print(
+                f"- {format_label(protocol)}"
+            )
+
+    else:
+        print(
+            "- None"
+        )
+
 
 def display_all_events():
     events = load_events()
@@ -760,6 +952,22 @@ def display_all_events():
             number
         )
 
+    execution = event.get(
+        "zenith_execution"
+    )
+
+    execution_error = event.get(
+        "zenith_protocol_execution_error"
+    )
+
+    if (
+        execution is not None
+        or execution_error is not None
+    ):
+        display_protocol_execution(
+            execution,
+            execution_error
+        )
 
 def monitor_live_events():
     print("\nZENITH LIVE TELEMETRY")

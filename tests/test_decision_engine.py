@@ -353,6 +353,84 @@ class ZenithDecisionEngineTests(
             ]
         )
 
+    def test_reversed_action_can_be_recommended_again(
+        self
+    ):
+        event = self.build_event(
+            event_type=(
+                "file_access_denied"
+            ),
+            resource="remote_admin"
+        )
 
+        features = self.build_features(
+            event_type=(
+                "file_access_denied"
+            ),
+            failed_logins_10m=2,
+            denied_accesses_10m=3,
+            unique_resources_30m=3,
+            department_resource_mismatch=1,
+            resource_sensitivity=4,
+            resource_traversal_count=3
+        )
+
+        assessment = (
+            self.build_assessment(
+                classification="suspicious",
+                confidence=0.75,
+                agreement="high"
+            )
+        )
+
+        action_still_active = (
+            self.engine.decide(
+                event=event,
+                features=features,
+                assessment=assessment,
+                existing_actions=[
+                    "lock_account",
+                    "isolate_endpoint"
+                ]
+            )
+        )
+
+        self.assertNotIn(
+            "lock_account",
+            action_still_active[
+                "recommended_protocols"
+            ]
+        )
+
+        self.assertNotIn(
+            "isolate_endpoint",
+            action_still_active[
+                "recommended_protocols"
+            ]
+        )
+
+        action_was_reversed = (
+            self.engine.decide(
+                event=event,
+                features=features,
+                assessment=assessment,
+                existing_actions=[]
+            )
+        )
+
+        self.assertIn(
+            "lock_account",
+            action_was_reversed[
+                "recommended_protocols"
+            ]
+        )
+
+        self.assertIn(
+            "isolate_endpoint",
+            action_was_reversed[
+                "recommended_protocols"
+            ]
+        )
+        
 if __name__ == "__main__":
     unittest.main()

@@ -178,7 +178,7 @@ class ZenithDecisionEngine:
             existing_actions or []
         )
 
-        state["existing_actions"].update(
+        state["existing_actions"] = (
             supplied_actions
         )
 

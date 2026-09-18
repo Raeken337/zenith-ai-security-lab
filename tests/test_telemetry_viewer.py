@@ -4,7 +4,8 @@ import unittest
 from contextlib import redirect_stdout
 
 from hq.telemetry_viewer import (
-    display_event
+    display_event,
+    display_protocol_execution
 )
 
 
@@ -187,7 +188,118 @@ class TelemetryViewerTests(
             }
             
         }
+        event["zenith_execution"] = {
+            "executed_at":
+                "2026-09-17T09:05:02",
 
+            "classification":
+                "suspicious",
+
+            "response_level":
+                4,
+
+            "response_name":
+                "containment",
+
+            "applied_actions": [
+                {
+                    "action_id":
+                        "lock-action-1",
+
+                    "protocol":
+                        "lock_account",
+
+                    "target_type":
+                        "user",
+
+                    "target":
+                        "jake",
+
+                    "status":
+                        "active",
+
+                    "reason":
+                        "Test containment",
+
+                    "applied_at":
+                        "2026-09-17T09:05:02",
+
+                    "reversed_at":
+                        None
+                },
+
+                {
+                    "action_id":
+                        "isolate-action-1",
+
+                    "protocol":
+                        "isolate_endpoint",
+
+                    "target_type":
+                        "endpoint",
+
+                    "target":
+                        "PC-FIN-01",
+
+                    "status":
+                        "active",
+
+                    "reason":
+                        "Test containment",
+
+                    "applied_at":
+                        "2026-09-17T09:05:02",
+
+                    "reversed_at":
+                        None
+                }
+            ],
+
+            "already_active": [
+                {
+                    "action_id":
+                        "monitor-action-1",
+
+                    "protocol":
+                        "increase_monitoring",
+
+                    "target_type":
+                        "user",
+
+                    "target":
+                        "jake",
+
+                    "status":
+                        "active",
+
+                    "reason":
+                        "Earlier alert",
+
+                    "applied_at":
+                        "2026-09-17T09:04:00",
+
+                    "reversed_at":
+                        None
+                }
+            ],
+
+            "satisfied_protocols": [
+                "record_event"
+            ],
+
+            "skipped_protocols":
+                [],
+
+            "active_protocols": [
+                "alert_administrator",
+                "increase_monitoring",
+                "invalidate_active_sessions",
+                "isolate_endpoint",
+                "lock_account",
+                "open_incident",
+                "require_step_up_authentication"
+            ]
+        }
         output = io.StringIO()
 
         with redirect_stdout(
@@ -257,6 +369,41 @@ class TelemetryViewerTests(
             "Highest response level: 4",
             rendered_output
         )
+        self.assertIn(
+            "Zenith Protocol Execution",
+            rendered_output
+        )
+
+        self.assertIn(
+            "Execution status: Completed",
+            rendered_output
+        )
+
+        self.assertIn(
+            "Lock Account -> User: jake",
+            rendered_output
+        )
+
+        self.assertIn(
+            (
+                "Isolate Endpoint -> "
+                "Endpoint: PC-FIN-01"
+            ),
+            rendered_output
+        )
+
+        self.assertIn(
+            (
+                "Increase Monitoring -> "
+                "User: jake"
+            ),
+            rendered_output
+        )
+
+        self.assertIn(
+            "Record Event",
+            rendered_output
+        )        
 
     def test_viewer_handles_legacy_event(
         self
@@ -290,6 +437,34 @@ class TelemetryViewerTests(
             output.getvalue()
         )
 
+    def test_viewer_displays_protocol_execution_error(
+        self
+    ):
+        output = io.StringIO()
 
+        with redirect_stdout(
+            output
+        ):
+            display_protocol_execution(
+                execution=None,
+                execution_error=(
+                    "OSError: State unavailable"
+                )
+            )
+
+        rendered_output = (
+            output.getvalue()
+        )
+
+        self.assertIn(
+            "Execution status: Failed",
+            rendered_output
+        )
+
+        self.assertIn(
+            "OSError: State unavailable",
+            rendered_output
+        )
+        
 if __name__ == "__main__":
     unittest.main()

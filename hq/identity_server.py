@@ -38,9 +38,18 @@ from office.office_admin_team import (
     get_office_admin_endpoints
 )
 
+from datetime import datetime
+
+from simulation.defensive_state import (
+    DefensiveStateStore
+)
 
 HOST = "127.0.0.1"
 PORT = 5001
+
+DEFENSIVE_STATE = (
+    DefensiveStateStore()
+)
 
 MAX_FAILED_ATTEMPTS = 3
 
@@ -106,6 +115,18 @@ def validate_endpoint(username, device_id):
             "valid": False,
             "reason": "Device is not registered"
         }
+    if (
+        DEFENSIVE_STATE
+        .is_endpoint_isolated(
+            device_id
+        )
+    ):
+        return {
+            "valid": False,
+            "reason": (
+                "Endpoint isolated by Zenith"
+            )
+        }    
 
     if endpoint.site != "OFFICE":
         return {
@@ -149,6 +170,33 @@ def authenticate_user(
             "authenticated": False,
             "reason": "Account locked"
         }
+    if (
+        DEFENSIVE_STATE
+        .is_account_locked(
+            username
+        )
+    ):
+        return {
+            "authenticated": False,
+            "reason": (
+                "Account locked by Zenith"
+            )
+        }
+
+    if (
+        DEFENSIVE_STATE
+        .requires_step_up(
+            username
+        )
+    ):
+        return {
+            "authenticated": False,
+            "step_up_required": True,
+            "reason": (
+                "Additional identity verification "
+                "required by Zenith"
+            )
+        }    
 
     if user["password"] != password:
         FAILED_ATTEMPTS[username] = (
@@ -185,6 +233,8 @@ def authenticate_user(
     session_token = secrets.token_hex(16)
 
     SESSIONS[session_token] = {
+        "issued_at":
+            datetime.now().isoformat(),
         "username": username,
         "full_name": user["full_name"],
         "department": user["department"],
@@ -208,16 +258,115 @@ def authenticate_user(
         "work_end": user["work_end"]
     }
 
+def build_invalid_session_response(
+    session,
+    reason
+):
+    return {
+        "valid": False,
+        "reason": reason,
+        "username": session["username"],
+        "full_name": session["full_name"],
+        "department": session["department"],
+        "groups": session["groups"],
+        "role": session["role"],
+        "work_start": session["work_start"],
+        "work_end": session["work_end"],
+        "source_device": session["source_device"]
+    }
 
 def validate_session(session_token):
-    session = SESSIONS.get(session_token)
-    
+    session = SESSIONS.get(
+        session_token
+    )
 
     if session is None:
         return {
             "valid": False,
             "reason": "Invalid session token"
         }
+
+    username = session[
+        "username"
+    ]
+
+    source_device = session[
+        "source_device"
+    ]
+
+    if (
+        DEFENSIVE_STATE
+        .is_account_locked(
+            username
+        )
+    ):
+        return (
+            build_invalid_session_response(
+                session,
+                "Account locked by Zenith"
+            )
+        )
+
+    if (
+        DEFENSIVE_STATE
+        .is_endpoint_isolated(
+            source_device
+        )
+    ):
+        return (
+            build_invalid_session_response(
+                session,
+                "Endpoint isolated by Zenith"
+            )
+        )
+
+    if (
+        DEFENSIVE_STATE
+        .requires_step_up(
+            username
+        )
+    ):
+        return (
+            build_invalid_session_response(
+                session,
+                (
+                    "Additional identity verification "
+                    "required by Zenith"
+                )
+            )
+        )
+
+    invalidated_at = (
+        DEFENSIVE_STATE
+        .session_invalidation_time(
+            username
+        )
+    )
+
+    if invalidated_at is not None:
+        issued_at = datetime.fromisoformat(
+            session.get(
+                "issued_at",
+                "1970-01-01T00:00:00"
+            )
+        )
+
+        invalidation_time = (
+            datetime.fromisoformat(
+                invalidated_at
+            )
+        )
+
+        if issued_at <= invalidation_time:
+            return (
+                build_invalid_session_response(
+                    session,
+                    (
+                        "Session invalidated "
+                        "by Zenith"
+                    )
+                )
+            )
 
     return {
         "valid": True,

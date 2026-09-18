@@ -21,3 +21,5 @@ Thumbs.db
 
 # Runtime telemetry
 data/logs/*.jsonl
+data/runtime/*.json
+data/runtime/*.tmp
